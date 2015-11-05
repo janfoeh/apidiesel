@@ -3,10 +3,12 @@ module Apidiesel
     module MockResponse
       class RequestHandler
         def run(request, api_config)
-          return request unless request.action.respond_to?(:mock_response)
+          action = request.action
 
-          file_name = request.action.mock_response[:file]
-          parser    = request.action.mock_response[:parser]
+          return request unless action.respond_to?(:mock_response) && action.mock_response
+
+          file_name = action.mock_response[:file]
+          parser    = action.mock_response[:parser]
           file      = File.read(file_name)
 
           request.response_body = if parser
