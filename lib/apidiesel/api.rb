@@ -96,10 +96,10 @@ module Apidiesel
     def execute_request(request)
       self.class.request_handlers.each do |handler|
         request = handler.run(request, @config)
-        break if request.completed?
+        break if request.response_body.present?
       end
 
-      unless request.completed?
+      unless request.response_body.present?
         raise "All request handlers failed to deliver a response"
       end
 

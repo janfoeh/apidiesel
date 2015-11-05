@@ -15,8 +15,8 @@ module Apidiesel
       end
 
       # Hash for storing filter closures. These closures are called with the received data
-      # after a request is made and have the opportunity to check and mangle it before it is
-      # passed into the response object.
+      # after a request is made and have the opportunity to modify or check it before the
+      # data is returned
       def data_filters
         @data_filters ||= []
       end
@@ -130,8 +130,7 @@ module Apidiesel
     # actions `responds_with` block.
     #
     # @param [Hash] *args see specific, non-abstract `Apidiesel::Action`
-    # @option *args [Boolean] :skip_cache always return a fresh, uncached response
-    # @return [Apidiesel::Response]
+    # @return [Apidiesel::Request]
     def build_request(*args)
       args = args && args.first.is_a?(Hash) ? args.first : {}
 

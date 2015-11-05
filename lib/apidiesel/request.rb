@@ -2,23 +2,21 @@ module Apidiesel
 
   # Wrapper for API requests
   class Request
-    attr_accessor :action, :parameters, :response, :http_request_response, :completed
+    attr_accessor :action, :parameters, :response_body, :http_request, :result
 
     # @param [Apidiesel::Action] action
-    def initialize(action:, parameters:, completed: false)
-      @action     = action
-      @parameters = parameters
-      @completed  = completed
+    # @param [Hash] parameters
+    def initialize(action:, parameters:)
+      @action      = action
+      @parameters  = parameters
     end
 
-    def completed?
-      @completed
+    def response_body
+      @response_body || http_request.try(:body)
     end
 
     def process_response
-      return false unless response && response.success?
-
-      response.process_data_through(action)
+      @result = action.process_response(response_body)
     end
   end
 end
