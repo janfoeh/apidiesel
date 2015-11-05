@@ -152,6 +152,8 @@ module Apidiesel
 
       response_hash.symbolize_keys!
 
+      return response_hash if self.class.data_filters.none?
+
       self.class.data_filters.each do |filter|
         filter.call(response_hash, processed_result)
       end
