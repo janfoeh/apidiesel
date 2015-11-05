@@ -220,7 +220,19 @@ module Apidiesel
         protected
 
       def get_value(key, hash, namespace = nil)
-        namespace ? hash[namespace][key] : hash[key]
+        if namespace.is_a?(Array)
+          fetch_path(hash, *namespace)
+        elsif namespace.nil?
+          hash[key]
+        else
+          hash[namespace][key]
+        end
+      end
+
+      def fetch_path(hash, *parts)
+        parts.reduce(hash) do |memo, key|
+          memo[key] if memo
+        end
       end
 
       def copy_value_directly(key, *args)
