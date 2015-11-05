@@ -34,8 +34,14 @@ module Apidiesel
         @response_handlers ||= []
       end
 
-      def config
+      def config(key = nil, value = nil)
         @config ||= {}
+
+        if key && value
+          @config[key] = value
+        else
+          @config
+        end
       end
 
       # Combined getter/setter for this actions URL
