@@ -18,7 +18,13 @@ module Apidiesel
     end
 
     def process_response
-      @result = action.process_response(response_body)
+      # Reraise ResponseErrors to include ourselves. Not
+      # pretty, but I can't think of anything nicer right now
+      begin
+        @result = action.process_response(response_body)
+      rescue ResponseError => e
+        raise ResponseError.new(e, self)
+      end
     end
 
     def to_s

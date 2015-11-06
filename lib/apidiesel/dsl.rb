@@ -217,6 +217,26 @@ module Apidiesel
         end
       end
 
+      # Raises an Apidiesel::ResponseError if the callable returns true
+      #
+      # @example
+      #   responds_with do
+      #     response_error_if ->(data) { data[:code] != 0 },
+      #                       message: ->(data) { data[:message] }
+      #
+      # @param [Lambda, Proc] callable
+      # @param [String, Lambda, Proc] message
+      # @raises [Apidiesel::ResponseError]
+      def response_error_if(callable, message:)
+        data_filters << lambda do |data, processed_data|
+          return processed_data unless callable.call(data)
+
+          message = message.is_a?(String) ? message : message.call(data)
+
+          raise ResponseError.new(message)
+        end
+      end
+
         protected
 
       def get_value(key, hash, namespace = nil)
