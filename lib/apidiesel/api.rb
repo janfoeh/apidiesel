@@ -90,11 +90,23 @@ module Apidiesel
           namespace.const_get(action).register(self)
         end
       end
+
+      def logger(logger = nil)
+        if logger
+          @logger = logger
+        else
+          @logger
+        end
+      end
     end
 
     # @param [Hash] *args
     def initialize(*args)
       @config = args.extract_options!.reverse_merge(self.class.config)
+    end
+
+    def logger
+      self.class.logger
     end
 
       protected
