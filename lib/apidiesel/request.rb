@@ -2,13 +2,15 @@ module Apidiesel
 
   # Wrapper for API requests
   class Request
-    attr_accessor :action, :parameters, :response_body, :http_request, :result
+    attr_accessor :action, :parameters, :response_body, :http_request, :metadata, :result
 
     # @param [Apidiesel::Action] action
     # @param [Hash] parameters
-    def initialize(action:, parameters:)
-      @action      = action
-      @parameters  = parameters
+    # @param [Hash] metadata
+    def initialize(action:, parameters:, metadata: {})
+      @action     = action
+      @parameters = parameters
+      @metadata   = metadata
     end
 
     def response_body
