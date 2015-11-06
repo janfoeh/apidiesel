@@ -115,13 +115,13 @@ module Apidiesel
           end
 
           unless options.has_key?(:optional) && options[:optional] == true
-            raise ArgumentError, "missing arg: #{param_name} - options: #{options.inspect}" unless given_params.has_key?(param_name) && !given_params[param_name].blank?
-            raise ArgumentError, "invalid arg #{param_name}: must respond to #{duck_typing_check}" unless given_params[param_name].respond_to?(duck_typing_check)
+            raise Apidiesel::InputError, "missing arg: #{param_name} - options: #{options.inspect}" unless given_params.has_key?(param_name) && !given_params[param_name].blank?
+            raise Apidiesel::InputError, "invalid arg #{param_name}: must respond to #{duck_typing_check}" unless given_params[param_name].respond_to?(duck_typing_check)
           end
 
           if options.has_key?(:allowed_values) && !given_params[param_name].blank?
             unless options[:allowed_values].include?(given_params[param_name])
-              raise ArgumentError, "value '#{given_params[param_name]}' is not a valid value for #{param_name}"
+              raise Apidiesel::InputError, "value '#{given_params[param_name]}' is not a valid value for #{param_name}"
             end
 
             if options[:allowed_values].is_a? Hash
