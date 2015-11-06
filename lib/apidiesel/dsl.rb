@@ -34,7 +34,8 @@ module Apidiesel
     def responds_with(&block)
       builder = FilterBuilder.new
       builder.instance_eval(&block)
-      data_filters.concat builder.data_filters
+      response_filters.concat builder.response_filters
+      response_formatters.concat builder.response_formatters
     end
 
     # ExpectationBuilder defines the methods available within an `expects` block
@@ -141,10 +142,11 @@ module Apidiesel
     # FilterBuilder defines the methods available within an `responds_with` block
     # when defining an API action.
     class FilterBuilder
-      attr_accessor :data_filters
+      attr_accessor :response_filters, :response_formatters
 
       def initialize
-        @data_filters = []
+        @response_filters    = []
+        @response_formatters = []
       end
 
       # Returns `key` from the API response as a string.
@@ -201,7 +203,7 @@ module Apidiesel
       def objects(key, *args)
         options = args.extract_options!
 
-        data_filters << lambda do |data, processed_data|
+        response_formatters << lambda do |data, processed_data|
           d = get_value(key, data, options[:within])
 
           if options[:processed_with]
@@ -214,6 +216,19 @@ module Apidiesel
           result_key = options[:as] || key
 
           processed_data[result_key] = d
+
+          processed_data
+        end
+      end
+
+      # Descends into the hash key hierarchy
+      #
+      # Useful for cutting out useless top-level keys
+      #
+      # @param [Symbol, Array] key
+      def set_scope(key)
+        response_filters << lambda do |data|
+          fetch_path(data, *key)
         end
       end
 
@@ -228,7 +243,7 @@ module Apidiesel
       # @param [String, Lambda, Proc] message
       # @raises [Apidiesel::ResponseError]
       def response_error_if(callable, message:)
-        data_filters << lambda do |data, processed_data|
+        response_formatters << lambda do |data, processed_data|
           return processed_data unless callable.call(data)
 
           message = message.is_a?(String) ? message : message.call(data)
@@ -258,8 +273,10 @@ module Apidiesel
       def copy_value_directly(key, *args)
         options = args.extract_options!
 
-        data_filters << lambda do |data, processed_data|
+        response_formatters << lambda do |data, processed_data|
           processed_data[key] = get_value(key, data, options[:within])
+
+          processed_data
         end
       end
 

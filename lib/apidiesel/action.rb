@@ -17,8 +17,12 @@ module Apidiesel
       # Hash for storing filter closures. These closures are called with the received data
       # after a request is made and have the opportunity to modify or check it before the
       # data is returned
-      def data_filters
-        @data_filters ||= []
+      def response_filters
+        @response_filters ||= []
+      end
+
+      def response_formatters
+        @response_formatters ||= []
       end
 
       def format_parameters(&block)
@@ -152,10 +156,16 @@ module Apidiesel
 
       response_hash.symbolize_keys!
 
-      return response_hash if self.class.data_filters.none?
+      if self.class.response_filters.none? && self.class.response_formatters.none?
+        return response_hash
+      end
 
-      self.class.data_filters.each do |filter|
-        filter.call(response_hash, processed_result)
+      self.class.response_filters.each do |filter|
+        response_hash = filter.call(response_hash)
+      end
+
+      self.class.response_formatters.each do |filter|
+        processed_result = filter.call(response_hash, processed_result)
       end
 
       processed_result
