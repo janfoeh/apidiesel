@@ -20,5 +20,15 @@ module Apidiesel
     def process_response
       @result = action.process_response(response_body)
     end
+
+    def to_s
+      [
+        "Apidiesel::Request",
+        action.http_method.to_s.upcase,
+        action.url,
+        action.endpoint,
+        parameters.collect { |key, value| "#{key}: #{value}"}.join(',')
+      ].join(' ')
+    end
   end
 end
