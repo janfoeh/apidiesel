@@ -18,8 +18,11 @@ module Apidiesel
         http_request.open_timeout         = api_config[:timeout] || 30
         http_request.read_timeout         = api_config[:timeout] || 30
 
+        request.http_request = http_request
+
         begin
           response = HTTPI.request(request.action.http_method, http_request)
+          request.http_response = response
         rescue => e
           raise RequestError.new(e, request)
         end
@@ -28,7 +31,7 @@ module Apidiesel
           raise RequestError.new("#{request.action.http_method} #{request.action.url} returned #{response.code}", request)
         end
 
-        response
+        request
       end
     end
   end

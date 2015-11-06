@@ -2,7 +2,7 @@ module Apidiesel
 
   # Wrapper for API requests
   class Request
-    attr_accessor :action, :parameters, :response_body, :http_request, :metadata, :result
+    attr_accessor :action, :parameters, :response_body, :http_request, :http_response, :metadata, :result
 
     # @param [Apidiesel::Action] action
     # @param [Hash] parameters
@@ -14,7 +14,7 @@ module Apidiesel
     end
 
     def response_body
-      @response_body || http_request.try(:body)
+      @response_body || http_response.try(:body)
     end
 
     def process_response
