@@ -133,7 +133,15 @@ module Apidiesel
         request = handler.run(request, @config)
       end
 
-      request.process_response
+      response_handler_klasses =
+        self.class.response_handlers.collect { |handler| handler.class.name.to_s.demodulize }
+
+      # Execute the actions' `responds_with` block automatically, unless
+      # the handler has been included manually in order to control the
+      # order in which the handlers are run
+      unless response_handler_klasses.include?('ActionResponseProcessor')
+        request.process_response
+      end
 
       request
     rescue => e
