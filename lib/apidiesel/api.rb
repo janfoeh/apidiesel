@@ -111,7 +111,9 @@ module Apidiesel
 
       protected
 
-    def execute_request(request)
+    def execute_request(action_klass, *args)
+      request = action_klass.new(self).build_request(*args)
+
       self.class.request_handlers.each do |handler|
         request = handler.run(request, @config)
         break if request.response_body.present?

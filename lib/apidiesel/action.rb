@@ -86,7 +86,7 @@ module Apidiesel
     def self.register(caller)
       caller.class_eval <<-EOT
         def #{name_as_method}(*args)
-          execute_request #{name}.new(self).build_request(*args)
+          execute_request(#{name}, *args)
         end
       EOT
     end
