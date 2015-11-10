@@ -34,6 +34,10 @@ module Apidiesel
         @response_handlers ||= []
       end
 
+      def exception_handlers
+        @exception_handlers ||= []
+      end
+
       def config(key = nil, value = nil)
         @config ||= {}
 
@@ -75,11 +79,13 @@ module Apidiesel
       # @param [Class] klass
 
       def use(klass, *args, &block)
-        request_handler  = "#{klass.name}::RequestHandler".safe_constantize
-        response_handler = "#{klass.name}::ResponseHandler".safe_constantize
+        request_handler   = "#{klass.name}::RequestHandler".safe_constantize
+        response_handler  = "#{klass.name}::ResponseHandler".safe_constantize
+        exception_handler = "#{klass.name}::ExceptionHandler".safe_constantize
 
-        request_handlers  << request_handler.new(*args, &block) if request_handler
-        response_handlers << response_handler.new(*args, &block) if response_handler
+        request_handlers   << request_handler.new(*args, &block) if request_handler
+        response_handlers  << response_handler.new(*args, &block) if response_handler
+        exception_handlers << exception_handler.new(*args, &block) if exception_handler
       end
 
       # Registers the individual API endpoint definitions
@@ -130,6 +136,12 @@ module Apidiesel
       request.process_response
 
       request
+    rescue => e
+      self.class.exception_handlers.each do |handler|
+        request = handler.run(e, request, @config)
+      end
+
+      raise e
     end
 
   end
