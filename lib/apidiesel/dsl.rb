@@ -63,6 +63,7 @@ module Apidiesel
       # @param [Hash] *args
       # @option *args [Boolean] :optional (false) defines whether this parameter may be omitted
       # @option *args [Symbol] :optional_if_present param_name is optional, if the parameter given here is present instead
+      # @option *args [Symbol] :required_if_present param_name is required if param_name is also present
       # @option *args [Symbol] :submitted_as submit param_name to the API under the name given here
       # @option *args [Object] :default a default parameter to be set when no value is specified
       # @option *args [Enumerable] :allowed_values only accept the values in this Enumerable.
@@ -132,6 +133,10 @@ module Apidiesel
 
           if options.has_key?(:optional_if_present)
             options[:optional] = true unless given_params[ options[:optional_if_present] ].blank?
+          end
+
+          if options.has_key?(:required_if_present)
+            options[:optional] = given_params[ options[:required_if_present] ].present? ? false : true
           end
 
           unless options.has_key?(:optional) && options[:optional] == true
