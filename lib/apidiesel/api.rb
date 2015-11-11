@@ -55,7 +55,7 @@ module Apidiesel
       # @param [String] value
       def url(base_url = nil)
         if base_url
-          config[:url] = base_url
+          config[:url] = URI.parse(base_url)
         else
           config[:url]
         end

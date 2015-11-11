@@ -11,7 +11,7 @@ module Apidiesel
       #               instance, as given to the handlers #run method
       #
       def execute_request(request:, payload:, api_config:)
-        http_request      = HTTPI::Request.new(request.action.url)
+        http_request      = HTTPI::Request.new(request.action.url.try(:to_s))
         http_request.body = payload
 
         http_request.auth.ssl.verify_mode = api_config[:ssl_verify_mode] || :peer

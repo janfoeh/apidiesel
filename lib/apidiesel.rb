@@ -1,3 +1,4 @@
+require 'uri'
 require 'httpi'
 
 HTTPI.log = false

@@ -31,7 +31,7 @@ module Apidiesel
       [
         "Apidiesel::Request",
         action.http_method.to_s.upcase,
-        action.url,
+        action.url.try(:to_s),
         action.endpoint,
         parameters.collect { |key, value| "#{key}: #{value}"}.join(',')
       ].join(' ')

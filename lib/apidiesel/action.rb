@@ -7,6 +7,7 @@ module Apidiesel
     # accessors for class instance variables
     # (class-level variables, not shared with subclasses)
     class << self
+      attr_reader :url_args
 
       # Hash for storing validation closures. These closures are called with the request
       # parameters before the request is made and have the opportunity to check and modify them.
@@ -49,11 +50,13 @@ module Apidiesel
       # Falls back to the Api setting if blank.
       #
       # @param [String] value
-      def url(value = nil)
+      def url(value = nil, **args)
+        return @url unless value || args.any?
+
         if value
-          @url = value
+          @url = URI.parse(value)
         else
-          @url
+          @url_args = args
         end
       end
 
@@ -122,7 +125,15 @@ module Apidiesel
     end
 
     def url
-      self.class.url || @api.class.url
+      url = self.class.url || @api.class.url
+
+      if self.class.url_args
+        self.class.url_args.each do |key, value|
+          url.send("#{key}=", value)
+        end
+      end
+
+      url
     end
 
     def http_method
