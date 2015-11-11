@@ -101,6 +101,25 @@ module Apidiesel
         validation_builder(:to_s, param_name, *args)
       end
 
+      # Defines a date, time or datetime parameter.
+      #
+      #
+      # @example
+      #   expects do
+      #     datetime :starts_at, format: '%d-%m-%Y'
+      #   end
+      #
+      # @param (see #string)
+      # @option *args [String] :format strftime format string
+      # @option (see #string)
+      def datetime(param_name, **args)
+        if args[:format]
+          args[:processor] = ->(value) { value.try(:strftime, args[:format]) }
+        end
+
+        validation_builder(:strftime, param_name, **args)
+      end
+
         protected
 
       def validation_builder(duck_typing_check, param_name, *args)
@@ -128,6 +147,10 @@ module Apidiesel
             if options[:allowed_values].is_a? Hash
               given_params[param_name] = options[:allowed_values][ given_params[param_name] ]
             end
+          end
+
+          if options[:processor]
+            given_params[param_name] = options[:processor].call(given_params[param_name])
           end
 
           if options[:submitted_as]
