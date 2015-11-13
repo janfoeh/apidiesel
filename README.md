@@ -1,8 +1,7 @@
 # Apidiesel
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/apidiesel`. To experiment with that code, run `bin/console` for an interactive prompt.
-
-TODO: Delete this and the text above, and describe your gem
+Apidiesel is a DSL for building API clients. It is made to be highly readable,
+easily extensible and to assume as little as possible about your API.
 
 ## Installation
 
@@ -22,7 +21,34 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+Apidiesel consists of three main parts: the base `Api`, one `Action` for each API
+endpoint and `Handler` plugins for processing incoming and outgoing data.
+
+    module Actions
+      class GetUsers < Apidiesel::Action
+        url path: '/users'
+
+        expects do
+          string :firstname, optional: true
+          string :lastname, optional: true
+          boolean :active, default: true
+        end
+
+        responds_with do
+          objects :users, wrapped_in: MyUserModel
+        end
+      end
+    end
+
+    class Api < Apidiesel::Api
+      url 'https://foo.example'
+      http_method :post
+
+      register_actions
+    end
+
+    api = Api.new
+    api.get_users(firstname: 'Jane', lastname: 'Doe')
 
 ## Development
 
