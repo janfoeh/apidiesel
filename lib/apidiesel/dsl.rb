@@ -210,6 +210,95 @@ module Apidiesel
         copy_value_directly(key, *args)
       end
 
+      # Returns an array of subhashes
+      #
+      # @example
+      #
+      #   # Given an API response:
+      #   #
+      #   # {
+      #   #   order_id: 5,
+      #   #   ordered_at :"2020-01-01",
+      #   #   products: [{
+      #   #     name: 'Catnip 2lbs',
+      #   #     product_id: 2004921
+      #   #   }]
+      #   # }
+      #
+      #   expects do
+      #     integer :order_id
+      #     datetime :ordered_at
+      #
+      #     an_array_of :products do
+      #       string :name
+      #       integer :product_id
+      #     end
+      #   end
+      #
+      #   # Given an API response:
+      #   #
+      #   # [
+      #   #   {
+      #   #     name: 'Catnip 2lbs',
+      #   #     order_id: 2004921
+      #   #   },
+      #   #   {
+      #   #     name: 'Catnip 5lbs',
+      #   #     order_id: 2004922
+      #   #   },
+      #   # ]
+      #
+      # @example
+      #   expects do
+      #     an_array_of do
+      #       string :name
+      #       integer :order_id
+      #     end
+      #   end
+      #
+      # @option *args [Symbol] the key for finding and returning the array
+      #                        (sets both :as and :at)
+      # @option **kargs [Symbol] :at which key to find the hash at in the
+      #                              response
+      # @option **kargs [Symbol] :as which key to return the result under
+      def an_array_of(*args, **kargs, &block)
+        if args.length == 1
+          kargs[:as] ||= args.first
+          kargs[:at] ||= args.first
+        end
+
+        response_formatters << lambda do |data, processed_data|
+          if kargs[:at]
+            data = data[ kargs[:at] ]
+          end
+
+          return processed_data unless data.present?
+
+          data = [data] if data.is_a?(Hash)
+
+          array_of_hashes = data.map do |hash|
+            builder = FilterBuilder.new
+            builder.instance_eval(&block)
+
+            result = {}
+
+            builder.response_formatters.each do |filter|
+              result = filter.call(hash, result)
+            end
+
+            result
+          end
+
+          if kargs[:as]
+            processed_data[ kargs[:as] ] = array_of_hashes
+          else
+            processed_data = array_of_hashes
+          end
+
+          processed_data
+        end
+      end
+
       # Returns the API response processed or wrapped in wrapper objects.
       #
       # @example
