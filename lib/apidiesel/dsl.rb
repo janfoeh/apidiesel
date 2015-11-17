@@ -31,11 +31,23 @@ module Apidiesel
     #
     # @macro [attach] responds_with
     #   @yield [Apidiesel::Dsl::FilterBuilder]
-    def responds_with(&block)
+    def responds_with(**args, &block)
       builder = FilterBuilder.new
+
       builder.instance_eval(&block)
-      response_filters.concat builder.response_filters
-      response_formatters.concat builder.response_formatters
+
+      response_filters.concat(builder.response_filters)
+      response_formatters.concat(builder.response_formatters)
+
+      if args[:unnested_hash]
+        response_formatters << lambda do |_, response|
+          if response.is_a?(Hash) && response.keys.length == 1
+            response.values.first
+          else
+            response
+          end
+        end
+      end
     end
 
     # ExpectationBuilder defines the methods available within an `expects` block
@@ -121,6 +133,9 @@ module Apidiesel
         validation_builder(:strftime, param_name, **args)
       end
 
+      alias_method :time, :datetime
+      alias_method :date, :datetime
+
         protected
 
       def validation_builder(duck_typing_check, param_name, *args)
@@ -177,37 +192,82 @@ module Apidiesel
         @response_formatters = []
       end
 
+      def value(*args, **kargs)
+        args = normalize_arguments(args, kargs)
+
+        response_formatters << lambda do |data, processed_data|
+          value = get_value(data, args[:at])
+
+          value = apply_filter(args[:prefilter], value)
+
+          value = apply_filter(args[:postfilter] || args[:filter], value)
+
+          value = args[:map][value] if args[:map]
+
+          processed_data[ args[:as] ] = value
+
+          processed_data
+        end
+      end
+
       # Returns `key` from the API response as a string.
       #
       # @param [Symbol] key the key name to be returned as a string
       # @param [Hash] *args
       # @option *args [Symbol] :within look up the key in a namespace (nested hash)
-      def string(key, *args)
-        copy_value_directly(key, *args)
+      def string(*args, **kargs)
+        create_primitive_formatter(:to_s, *args, **kargs)
       end
 
       # Returns `key` from the API response as an integer.
       #
       # @param (see #string)
       # @option (see #string)
-      def integer(key, *args)
-        copy_value_directly(key, *args)
+      def integer(*args, **kargs)
+        create_primitive_formatter(:to_i, *args, **kargs)
       end
 
-      # Returns `key` from the API response as a hash.
+      # Returns `key` from the API response as a float.
       #
       # @param (see #string)
       # @option (see #string)
-      def hash(key, *args)
-        copy_value_directly(key, *args)
+      def float(*args, **kargs)
+        create_primitive_formatter(:to_f, *args, **kargs)
       end
 
-      # Returns `key` from the API response as an array.
+      # Returns `key` from the API response as a symbol.
       #
       # @param (see #string)
       # @option (see #string)
-      def array(key, *args)
-        copy_value_directly(key, *args)
+      def symbol(*args, **kargs)
+        create_primitive_formatter(:to_sym, *args, **kargs)
+      end
+
+      # Returns `key` from the API response as DateTime.
+      #
+      # @param (see #string)
+      # @option (see #string)
+      def datetime(*args, **kargs)
+        args = normalize_arguments(args, kargs)
+        args.reverse_merge!(format: '%Y-%m-%d')
+
+        response_formatters << lambda do |data, processed_data|
+          value = get_value(data, args[:at])
+
+          value = apply_filter(args[:prefilter], value)
+
+          if args.has_key?(:on_error)
+            value = DateTime.strptime(value, args[:format]) rescue args[:on_error]
+          else
+            value = DateTime.strptime(value, args[:format])
+          end
+
+          value = apply_filter(args[:postfilter] || args[:filter], value)
+
+          processed_data[ args[:as] ] = value
+
+          processed_data
+        end
       end
 
       # Returns an array of subhashes
@@ -261,16 +321,16 @@ module Apidiesel
       # @option **kargs [Symbol] :at which key to find the hash at in the
       #                              response
       # @option **kargs [Symbol] :as which key to return the result under
-      def an_array_of(*args, **kargs, &block)
-        if args.length == 1
-          kargs[:as] ||= args.first
-          kargs[:at] ||= args.first
+      def array(*args, **kargs, &block)
+        unless block.present?
+          create_primitive_formatter(:to_a, *args, **kargs)
+          return
         end
 
+        args = normalize_arguments(args, kargs)
+
         response_formatters << lambda do |data, processed_data|
-          if kargs[:at]
-            data = data[ kargs[:at] ]
-          end
+          data = get_value(data, args[:at])
 
           return processed_data unless data.present?
 
@@ -282,18 +342,54 @@ module Apidiesel
 
             result = {}
 
+            hash = apply_filter(args[:prefilter_each], hash)
+
             builder.response_formatters.each do |filter|
               result = filter.call(hash, result)
             end
 
+            result = apply_filter(args[:postfilter_each] || args[:filter_each], result)
+
             result
           end
 
-          if kargs[:as]
-            processed_data[ kargs[:as] ] = array_of_hashes
-          else
-            processed_data = array_of_hashes
+          processed_data[ args[:as] ] = array_of_hashes
+
+          processed_data
+        end
+      end
+
+      # Returns `key` from the API response as a hash.
+      #
+      # @param (see #string)
+      # @option (see #string)
+      def hash(*args, **kargs, &block)
+        unless block.present?
+          create_primitive_formatter(:to_hash, *args, **kargs)
+          return
+        end
+
+        args = normalize_arguments(args, kargs)
+
+        response_formatters << lambda do |data, processed_data|
+          data = get_value(data, args[:at])
+
+          return processed_data unless data.is_a?(Hash)
+
+          hash = apply_filter(args[:prefilter], data)
+
+          result = {}
+
+          builder = FilterBuilder.new
+          builder.instance_eval(&block)
+
+          builder.response_formatters.each do |filter|
+            result = filter.call(hash, result)
           end
+
+          result = apply_filter(args[:postfilter_each] || args[:filter_each], result)
+
+          processed_data[ args[:as] ] = result
 
           processed_data
         end
@@ -317,22 +413,19 @@ module Apidiesel
       # @option *args [Proc] :processed_with yield the data to this Proc for processing
       # @option *args [Class] :wrapped_in wrapper object, will be called as `Object.create(data)`
       # @option *args [Symbol] :as key name to save the result as
-      def objects(key, *args)
-        options = args.extract_options!
+      def objects(*args, **kargs)
+        args = normalize_arguments(args, kargs)
 
         response_formatters << lambda do |data, processed_data|
-          d = get_value(key, data, options[:within])
+          value = get_value(data, args[:at])
 
-          if options[:processed_with]
-            d = options[:processed_with].call(d)
-          end
-          if options[:wrapped_in]
-            d = options[:wrapped_in].send(:create, d)
-          end
+          value = apply_filter(args[:prefilter], value)
 
-          result_key = options[:as] || key
+          value = args[:type].send(:create, value)
 
-          processed_data[result_key] = d
+          value = apply_filter(args[:postfilter] || args[:filter], value)
+
+          processed_data[ args[:as] ] = value
 
           processed_data
         end
@@ -345,7 +438,7 @@ module Apidiesel
       # @param [Symbol, Array] key
       def set_scope(key)
         response_filters << lambda do |data|
-          fetch_path(data, *key)
+          begin; fetch_path(data, *key); rescue => e; binding.pry; end
         end
       end
 
@@ -371,29 +464,54 @@ module Apidiesel
 
         protected
 
-      def get_value(key, hash, namespace = nil)
-        if namespace.is_a?(Array)
-          fetch_path(hash, *namespace)
-        elsif namespace.nil?
-          hash[key]
-        else
-          hash[namespace][key]
-        end
-      end
-
-      def fetch_path(hash, *parts)
-        parts.reduce(hash) do |memo, key|
-          memo[key] if memo
-        end
-      end
-
-      def copy_value_directly(key, *args)
-        options = args.extract_options!
+      def create_primitive_formatter(cast_method_symbol, *args, **kargs)
+        args = normalize_arguments(args, kargs)
 
         response_formatters << lambda do |data, processed_data|
-          processed_data[key] = get_value(key, data, options[:within])
+          value = get_value(data, args[:at])
+
+          value = apply_filter(args[:prefilter], value)
+
+          value = value.try(cast_method_symbol)
+
+          value = apply_filter(args[:postfilter] || args[:filter], value)
+
+          value = args[:map][value] if args[:map]
+
+          processed_data[ args[:as] ] = value
 
           processed_data
+        end
+      end
+
+      def normalize_arguments(args, kargs)
+        if args.length == 1
+          kargs[:as] ||= args.first
+          kargs[:at] ||= args.first
+        end
+
+        kargs
+      end
+
+      def apply_filter(filter, value)
+        return value unless filter
+
+        filter.call(value)
+      end
+
+      def get_value(hash, *keys)
+        keys = keys.first if keys.first.is_a?(Array)
+
+        if keys.length > 1
+          fetch_path(hash, keys)
+        else
+          hash[keys.first]
+        end
+      end
+
+      def fetch_path(hash, key_or_keys)
+        Array(key_or_keys).reduce(hash) do |memo, key|
+          memo[key] if memo
         end
       end
 
