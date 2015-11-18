@@ -270,6 +270,60 @@ module Apidiesel
         end
       end
 
+      # Returns `key` from the API response as Date.
+      #
+      # @param (see #string)
+      # @option (see #string)
+      def date(*args, **kargs)
+        args = normalize_arguments(args, kargs)
+        args.reverse_merge!(format: '%Y-%m-%d')
+
+        response_formatters << lambda do |data, processed_data|
+          value = get_value(data, args[:at])
+
+          value = apply_filter(args[:prefilter], value)
+
+          if args.has_key?(:on_error)
+            value = Date.strptime(value, args[:format]) rescue args[:on_error]
+          else
+            value = Date.strptime(value, args[:format])
+          end
+
+          value = apply_filter(args[:postfilter] || args[:filter], value)
+
+          processed_data[ args[:as] ] = value
+
+          processed_data
+        end
+      end
+
+      # Returns `key` from the API response as Time.
+      #
+      # @param (see #string)
+      # @option (see #string)
+      def time(*args, **kargs)
+        args = normalize_arguments(args, kargs)
+        args.reverse_merge!(format: '%Y-%m-%d')
+
+        response_formatters << lambda do |data, processed_data|
+          value = get_value(data, args[:at])
+
+          value = apply_filter(args[:prefilter], value)
+
+          if args.has_key?(:on_error)
+            value = Time.strptime(value, args[:format]) rescue args[:on_error]
+          else
+            value = Time.strptime(value, args[:format])
+          end
+
+          value = apply_filter(args[:postfilter] || args[:filter], value)
+
+          processed_data[ args[:as] ] = value
+
+          processed_data
+        end
+      end
+
       # Returns an array of subhashes
       #
       # @example
@@ -431,7 +485,7 @@ module Apidiesel
         end
       end
 
-      %w{value string integer float hash array datetime objects symbol}.each do |name|
+      %w{value string integer float hash array datetime date time objects symbol}.each do |name|
         define_method "x_#{name}".to_sym, ->(*args, **kargs, &block) { }
       end
 
