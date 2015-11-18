@@ -431,6 +431,10 @@ module Apidiesel
         end
       end
 
+      %w{value string integer float hash array datetime objects symbol}.each do |name|
+        define_method "x_#{name}".to_sym, ->(*args, **kargs, &block) { }
+      end
+
       # Descends into the hash key hierarchy
       #
       # Useful for cutting out useless top-level keys
