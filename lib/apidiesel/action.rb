@@ -165,7 +165,7 @@ module Apidiesel
     def process_response(response_hash)
       processed_result = {}
 
-      response_hash.symbolize_keys!
+      response_hash.deep_symbolize_keys!
 
       if self.class.response_filters.none? && self.class.response_formatters.none?
         return response_hash
