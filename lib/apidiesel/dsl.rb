@@ -398,16 +398,21 @@ module Apidiesel
 
             hash = apply_filter(args[:prefilter_each], hash)
 
+            next if hash.blank?
+
             builder.response_formatters.each do |filter|
               result = filter.call(hash, result)
+              break if result.blank?
             end
+
+            next if result.blank?
 
             result = apply_filter(args[:postfilter_each] || args[:filter_each], result)
 
             result
           end
 
-          processed_data[ args[:as] ] = array_of_hashes
+          processed_data[ args[:as] ] = array_of_hashes.compact!
 
           processed_data
         end
