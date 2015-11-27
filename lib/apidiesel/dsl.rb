@@ -412,7 +412,7 @@ module Apidiesel
             result
           end
 
-          processed_data[ args[:as] ] = array_of_hashes.compact!
+          processed_data[ args[:as] ] = array_of_hashes.compact
 
           processed_data
         end
