@@ -162,21 +162,30 @@ module Apidiesel
       Apidiesel::Request.new action: self, parameters: params
     end
 
-    def process_response(response_hash)
+    def process_response(response_data)
       processed_result = {}
 
-      response_hash.deep_symbolize_keys!
+      response_data = case response_data
+      when Hash
+        response_data.deep_symbolize_keys
+      when Array
+        response_data.map do |element|
+          element.is_a?(Hash) ? element.deep_symbolize_keys : element
+        end
+      else
+        response_data
+      end
 
       if self.class.response_filters.none? && self.class.response_formatters.none?
-        return response_hash
+        return response_data
       end
 
       self.class.response_filters.each do |filter|
-        response_hash = filter.call(response_hash)
+        response_data = filter.call(response_data)
       end
 
       self.class.response_formatters.each do |filter|
-        processed_result = filter.call(response_hash, processed_result)
+        processed_result = filter.call(response_data, processed_result)
       end
 
       processed_result
