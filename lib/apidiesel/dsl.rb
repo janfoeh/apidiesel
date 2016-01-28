@@ -156,7 +156,12 @@ module Apidiesel
 
           unless options.has_key?(:optional) && options[:optional] == true
             raise Apidiesel::InputError, "missing arg: #{param_name} - options: #{options.inspect}" unless given_params.has_key?(param_name) && !given_params[param_name].nil?
-            raise Apidiesel::InputError, "invalid arg #{param_name}: must respond to #{duck_typing_check}" unless given_params[param_name].respond_to?(duck_typing_check)
+
+            if duck_typing_check.is_a?(Proc)
+              duck_typing_check.call(given_params[param_name], param_name)
+            else
+              raise Apidiesel::InputError, "invalid arg #{param_name}: must respond to #{duck_typing_check}" unless given_params[param_name].respond_to?(duck_typing_check)
+            end
           end
 
           if options.has_key?(:allowed_values) && !given_params[param_name].blank?
