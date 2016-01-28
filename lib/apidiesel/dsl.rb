@@ -136,6 +136,27 @@ module Apidiesel
       alias_method :time, :datetime
       alias_method :date, :datetime
 
+      # Defines an object parameter
+      #
+      #
+      # @example
+      #   expects do
+      #     object :contract, klass: Contract
+      #   end
+      #
+      # @param (see #string)
+      # @option *args [Class] :klass
+      # @option (see #string)
+      def object(param_name, **args)
+        type_check = ->(value, param_name) {
+          unless value.is_a?(args[:klass])
+            raise Apidiesel::InputError, "arg #{param_name} must be a #{args[:klass].name}"
+          end
+        }
+
+        validation_builder(type_check, param_name, **args)
+      end
+
         protected
 
       def validation_builder(duck_typing_check, param_name, *args)
