@@ -55,7 +55,9 @@ module Apidiesel
       def url(value = nil, **args)
         return @url unless value || args.any?
 
-        if value
+        if value && value.is_a?(Proc)
+          @url = value
+        elsif value
           @url = URI.parse(value)
         else
           @url_args = args
@@ -126,10 +128,21 @@ module Apidiesel
       self.class.endpoint
     end
 
-    def url
-      url = self.class.url || @api.class.url
+    def base_url
+      if self.class.url.nil? || self.class.url.is_a?(Proc)
+        @api.class.url.dup
+      else
+        self.class.url.dup
+      end
+    end
 
-      if self.class.url_args
+    def url
+      if self.class.url.is_a?(Proc)
+        url = self.class.url
+
+      elsif self.class.url_args
+        url = base_url
+
         self.class.url_args.each do |key, value|
           url.send("#{key}=", value)
         end

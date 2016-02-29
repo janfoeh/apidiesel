@@ -13,6 +13,16 @@ module Apidiesel
       @metadata   = metadata
     end
 
+    def url
+      @url ||=
+        case action.url
+        when Proc
+          action.url.call(action.base_url, self)
+        when URI
+          action.url
+        end
+    end
+
     def response_body
       @response_body || http_response.try(:body)
     end
@@ -31,7 +41,7 @@ module Apidiesel
       [
         "Apidiesel::Request",
         action.http_method.to_s.upcase,
-        action.url.try(:to_s),
+        url.try(:to_s),
         action.endpoint,
         parameters.collect { |key, value| "#{key}: #{value}"}.join(',')
       ].join(' ')

@@ -11,7 +11,7 @@ module Apidiesel
       #               instance, as given to the handlers #run method
       #
       def execute_request(request:, payload:, api_config:)
-        http_request      = HTTPI::Request.new(request.action.url.try(:to_s))
+        http_request      = HTTPI::Request.new(request.url.try(:to_s))
         http_request.body = payload
 
         if api_config[:http_basic_username] && api_config[:http_basic_password]
@@ -32,7 +32,7 @@ module Apidiesel
         end
 
         if response.error?
-          raise RequestError.new("#{request.action.http_method} #{request.action.url} returned #{response.code}", request)
+          raise RequestError.new("#{request.action.http_method} #{request.url} returned #{response.code}", request)
         end
 
         request
