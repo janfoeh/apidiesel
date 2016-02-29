@@ -96,7 +96,13 @@ module Apidiesel
     def execute_request(action_klass, *args)
       request = action_klass.new(self).build_request(*args)
 
-      self.class.request_handlers.each do |handler|
+      request_handlers =
+        action_klass.request_handlers.any? ? action_klass.request_handlers : self.class.request_handlers
+
+      response_handlers =
+        action_klass.response_handlers.any? ? action_klass.response_handlers : self.class.response_handlers
+
+      request_handlers.each do |handler|
         request = handler.run(request, @config)
         break if request.response_body.present?
       end
@@ -105,12 +111,12 @@ module Apidiesel
         raise "All request handlers failed to deliver a response"
       end
 
-      self.class.response_handlers.each do |handler|
+      response_handlers.each do |handler|
         request = handler.run(request, @config)
       end
 
       response_handler_klasses =
-        self.class.response_handlers.collect { |handler| handler.class.name.to_s.demodulize }
+        response_handlers.collect { |handler| handler.class.name.to_s.demodulize }
 
       # Execute the actions' `responds_with` block automatically, unless
       # the handler has been included manually in order to control the
@@ -121,7 +127,10 @@ module Apidiesel
 
       request
     rescue => e
-      self.class.exception_handlers.each do |handler|
+      exception_handlers =
+        action_klass.exception_handlers.any? ? action_klass.exception_handlers : self.class.exception_handlers
+
+      exception_handlers.each do |handler|
         request = handler.run(e, request, @config)
       end
 

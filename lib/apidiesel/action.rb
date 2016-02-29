@@ -7,6 +7,8 @@ module Apidiesel
     # accessors for class instance variables
     # (class-level variables, not shared with subclasses)
     class << self
+      include Handlers
+
       attr_reader :url_args
 
       # Hash for storing validation closures. These closures are called with the request
