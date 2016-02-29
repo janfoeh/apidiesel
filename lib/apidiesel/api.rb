@@ -130,7 +130,7 @@ module Apidiesel
       end
 
       response_handler_klasses =
-        response_handlers.collect { |handler| handler.class.name.to_s.demodulize }
+        response_handlers.collect { |handler| handler.class.name.split('::')[-2] }
 
       # Execute the actions' `responds_with` block automatically, unless
       # the handler has been included manually in order to control the
