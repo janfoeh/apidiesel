@@ -14,6 +14,10 @@ module Apidiesel
         http_request      = HTTPI::Request.new(request.action.url.try(:to_s))
         http_request.body = payload
 
+        if api_config[:http_basic_username] && api_config[:http_basic_password]
+          http_request.auth.basic(api_config[:http_basic_username], api_config[:http_basic_password])
+        end
+
         http_request.auth.ssl.verify_mode = api_config[:ssl_verify_mode] || :peer
         http_request.open_timeout         = api_config[:timeout] || 30
         http_request.read_timeout         = api_config[:timeout] || 30

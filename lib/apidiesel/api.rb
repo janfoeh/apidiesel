@@ -64,6 +64,20 @@ module Apidiesel
         end
       end
 
+      # Combined getter/setter for the HTTP Basic Auth
+      #
+      # Falls back to the Api setting if blank.
+      #
+      # @param [String] value
+      def http_basic_auth(username = nil, password = nil)
+        if username && password
+          config[:http_basic_username] = username
+          config[:http_basic_password] = password
+        else
+          return config[:http_basic_username], config[:http_basic_password]
+        end
+      end
+
       # Registers the individual API endpoint definitions
       def register_actions
         namespace = "#{self.name.deconstantize}::Actions".safe_constantize
