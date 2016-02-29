@@ -118,10 +118,10 @@ module Apidiesel
 
       request_handlers.each do |handler|
         request = handler.run(request, @config)
-        break if request.response_body.present?
+        break if request.response_body != nil
       end
 
-      unless request.response_body.present?
+      unless request.response_body != nil
         raise "All request handlers failed to deliver a response"
       end
 
