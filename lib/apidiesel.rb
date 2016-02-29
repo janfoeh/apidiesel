@@ -6,6 +6,7 @@ HTTPI.log = false
 require 'apidiesel/version'
 
 require 'apidiesel/errors'
+require 'apidiesel/handlers'
 require 'apidiesel/api'
 require 'apidiesel/dsl'
 require 'apidiesel/request'
