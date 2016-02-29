@@ -22,6 +22,10 @@ module Apidiesel
         http_request.open_timeout         = api_config[:timeout] || 30
         http_request.read_timeout         = api_config[:timeout] || 30
 
+        if block_given?
+          http_request = yield http_request
+        end
+
         request.http_request = http_request
 
         begin
