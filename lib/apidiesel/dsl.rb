@@ -369,7 +369,7 @@ module Apidiesel
       #     integer :order_id
       #     datetime :ordered_at
       #
-      #     an_array_of :products do
+      #     array :products do
       #       string :name
       #       integer :product_id
       #     end
@@ -390,7 +390,7 @@ module Apidiesel
       #
       # @example
       #   expects do
-      #     an_array_of do
+      #     array do
       #       string :name
       #       integer :order_id
       #     end
@@ -410,7 +410,7 @@ module Apidiesel
         args = normalize_arguments(args, kargs)
 
         response_formatters << lambda do |data, processed_data|
-          data = get_value(data, args[:at])
+          data = get_value(data, args[:at]) if args[:at]
 
           return processed_data unless data.present?
 
@@ -438,9 +438,12 @@ module Apidiesel
             result
           end
 
-          processed_data[ args[:as] ] = array_of_hashes.compact
-
-          processed_data
+          if args[:as]
+            processed_data[ args[:as] ] = array_of_hashes.compact
+            processed_data
+          else
+            array_of_hashes.compact
+          end
         end
       end
 
