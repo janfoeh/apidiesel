@@ -17,7 +17,11 @@ module Apidiesel
 
           request.metadata[:finished_at] = DateTime.now
 
-          request.response_body = ::JSON.parse(request.http_response.body)
+          if request.http_response.code == 204
+            request.response_body = {}
+          else
+            request.response_body = ::JSON.parse(request.http_response.body)
+          end
 
           request
         end
