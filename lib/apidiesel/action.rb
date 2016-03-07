@@ -9,7 +9,7 @@ module Apidiesel
     class << self
       include Handlers
 
-      attr_reader :url_args
+      attr_reader :url_args, :url_proc
 
       # Hash for storing validation closures. These closures are called with the request
       # parameters before the request is made and have the opportunity to check and modify them.
@@ -52,12 +52,15 @@ module Apidiesel
       # Falls back to the Api setting if blank.
       #
       # @param [String] value
-      def url(value = nil, **args)
+      def url(value = nil, **args, &block)
+        if block_given?
+          @url_proc = block
+          return @url_proc
+        end
+
         return @url unless value || args.any?
 
-        if value && value.is_a?(Proc)
-          @url = value
-        elsif value
+        if value
           @url = URI.parse(value)
         else
           @url_args = args
@@ -78,7 +81,7 @@ module Apidiesel
       end
     end
 
-    attr_accessor :api
+    attr_accessor :api, :parameters
 
     # Hook method that is called by {Apidiesel::Api} to register this Action on itself.
     #
@@ -113,15 +116,8 @@ module Apidiesel
 
     # @param [Apidiesel::Api] api A reference to the parent Api object
     def initialize(api)
-      @api = api
-    end
-
-    # Getter/setter for the parameters to be used for creating the API request. Prefilled
-    # with the `op` action key.
-    #
-    # @return [Hash]
-    def parameters
-      @parameters ||= {}
+      @api        = api
+      @parameters = {}
     end
 
     def endpoint
@@ -137,18 +133,8 @@ module Apidiesel
     end
 
     def url
-      if self.class.url.is_a?(Proc)
-        url = self.class.url
-
-      elsif self.class.url_args
-        url = base_url
-
-        self.class.url_args.each do |key, value|
-          url.send("#{key}=", value)
-        end
-      end
-
-      url
+      parametrize_url
+      build_url
     end
 
     def http_method
@@ -206,7 +192,32 @@ module Apidiesel
       processed_result
     end
 
-      protected
+    protected
+
+    def parametrize_url
+      return unless self.class.url_proc
+
+      result = self.class.url_proc.call(self)
+
+      if result.is_a?(Hash)
+        @url_args = result
+      elsif result.is_a?(String)
+        @url = result
+      end
+    end
+
+    def build_url
+      url       = @url || self.class.url || @api.class.url
+      url_args  = @url_args || self.class.url_args
+
+      if url_args
+        url_args.each do |key, value|
+          url.send("#{key}=", value)
+        end
+      end
+
+      url
+    end
 
     # @return [Hash] Apidiesel configuration options
     def config

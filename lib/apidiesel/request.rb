@@ -8,19 +8,14 @@ module Apidiesel
     # @param [Hash] parameters
     # @param [Hash] metadata
     def initialize(action:, parameters:, metadata: {})
-      @action     = action
-      @parameters = parameters
-      @metadata   = metadata
+      @action           = action
+      @parameters       = parameters
+      @metadata         = metadata
+      action.parameters = parameters
     end
 
     def url
-      @url ||=
-        case action.url
-        when Proc
-          action.url.call(action.base_url, self)
-        when URI
-          action.url
-        end
+      action.url
     end
 
     def response_body
@@ -41,7 +36,7 @@ module Apidiesel
       [
         "Apidiesel::Request",
         action.http_method.to_s.upcase,
-        url.try(:to_s),
+        action.url.try(:to_s),
         action.endpoint,
         parameters.collect { |key, value| "#{key}: #{value}"}.join(',')
       ].join(' ')
