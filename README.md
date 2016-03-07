@@ -24,31 +24,59 @@ Or install it yourself as:
 Apidiesel consists of three main parts: the base `Api`, one `Action` for each API
 endpoint and `Handler` plugins for processing incoming and outgoing data.
 
-    module Actions
-      class GetUsers < Apidiesel::Action
-        url path: '/users'
+```ruby
+module Actions
+  class GetUsers < Apidiesel::Action
+    url path: '/users'
 
-        expects do
-          string :firstname, optional: true
-          string :lastname, optional: true
-          boolean :active, default: true
-        end
-
-        responds_with do
-          objects :users, wrapped_in: MyUserModel
-        end
-      end
+    expects do
+      string :firstname, optional: true
+      string :lastname, optional: true
+      boolean :active, default: true
     end
 
-    class Api < Apidiesel::Api
-      url 'https://foo.example'
-      http_method :post
+    responds_with do
+      objects :users, wrapped_in: MyUserModel
+    end
+  end
+end
+```
 
-      register_actions
+```ruby
+class Api < Apidiesel::Api
+  url 'https://foo.example'
+  http_method :post
+
+  register_actions
+end
+
+api = Api.new
+api.get_users(firstname: 'Jane', lastname: 'Doe')
+```
+    
+Parametrize url:
+
+```ruby
+module Actions
+  class GetUsers < Apidiesel::Action
+    #block gets an instance of action
+    url do |action|
+      {path: "/users/#{action.parameters[:username]}"}
     end
 
-    api = Api.new
-    api.get_users(firstname: 'Jane', lastname: 'Doe')
+    expects do
+      string  :firstname, optional: true
+      string  :lastname, optional: true
+      boolean :active, default: true
+      string :username
+    end
+
+    responds_with do
+      objects :users, wrapped_in: MyUserModel
+    end
+  end
+end
+```
 
 ## Development
 
