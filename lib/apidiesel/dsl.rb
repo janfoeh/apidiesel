@@ -17,6 +17,7 @@ module Apidiesel
       builder = ExpectationBuilder.new
       builder.instance_eval(&block)
       parameter_validations.concat builder.parameter_validations
+      parameters_to_filter.concat builder.parameters_to_filter
     end
 
     # Defines the expected content and format of the response for this API action.
@@ -53,10 +54,11 @@ module Apidiesel
     # ExpectationBuilder defines the methods available within an `expects` block
     # when defining an API action.
     class ExpectationBuilder
-      attr_accessor :parameter_validations
+      attr_accessor :parameter_validations, :parameters_to_filter
 
       def initialize
         @parameter_validations  = []
+        @parameters_to_filter   = []
       end
 
       # Defines a string parameter.
@@ -78,12 +80,15 @@ module Apidiesel
       # @option *args [Symbol] :required_if_present param_name is required if param_name is also present
       # @option *args [Symbol] :submitted_as submit param_name to the API under the name given here
       # @option *args [Object] :default a default parameter to be set when no value is specified
+      # @option *args [true, false] :submit set to `false` for arguments that should not be submitted
+      #                                     as API parameters. Defaults to `true`
       # @option *args [Enumerable] :allowed_values only accept the values in this Enumerable.
       #                             If Enumerable is a Hash, use the hash values to define what is actually
       #                             sent to the server. Example: `:allowed_values => {:foo => "f"}` allows
       #                             the value ':foo', but sends it as 'f'
       def string(param_name, *args)
         validation_builder(:to_s, param_name, *args)
+        parameters_to_filter << param_name if args[:submit] == false
       end
 
       # Defines an integer parameter.
@@ -97,6 +102,7 @@ module Apidiesel
       # @option (see #string)
       def integer(param_name, *args)
         validation_builder(:to_i, param_name, *args)
+        parameters_to_filter << param_name if args[:submit] == false
       end
 
       # Defines a boolean parameter.
@@ -112,6 +118,7 @@ module Apidiesel
       # @option (see #string)
       def boolean(param_name, *args)
         validation_builder(:to_s, param_name, *args)
+        parameters_to_filter << param_name if args[:submit] == false
       end
 
       # Defines a date, time or datetime parameter.
@@ -131,6 +138,7 @@ module Apidiesel
         end
 
         validation_builder(:strftime, param_name, **args)
+        parameters_to_filter << param_name if args[:submit] == false
       end
 
       alias_method :time, :datetime
@@ -155,6 +163,7 @@ module Apidiesel
         }
 
         validation_builder(type_check, param_name, **args)
+        parameters_to_filter << param_name if args[:submit] == false
       end
 
         protected
@@ -543,7 +552,7 @@ module Apidiesel
       #
       # @param [Lambda, Proc] callable
       # @param [String, Lambda, Proc] message
-      # @raises [Apidiesel::ResponseError]
+      # @raise [Apidiesel::ResponseError]
       def response_error_if(callable, message:)
         response_formatters << lambda do |data, processed_data|
           return processed_data unless callable.call(data)

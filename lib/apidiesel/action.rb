@@ -11,13 +11,18 @@ module Apidiesel
 
       attr_reader :url_value, :url_args
 
-      # Hash for storing validation closures. These closures are called with the request
+      # Array for storing parameter validation closures. These closures are called with the request
       # parameters before the request is made and have the opportunity to check and modify them.
       def parameter_validations
         @parameter_validations ||= []
       end
 
-      # Hash for storing filter closures. These closures are called with the received data
+      # Array for storing action argument names which are not to be submitted as parameters
+      def parameters_to_filter
+        @parameters_to_filter ||= []
+      end
+
+      # Array for storing filter closures. These closures are called with the received data
       # after a request is made and have the opportunity to modify or check it before the
       # data is returned
       def response_filters
@@ -204,6 +209,8 @@ module Apidiesel
 
       if self.class.parameter_formatter
         params = self.class.parameter_formatter.call(params)
+      else
+        params.except!(*self.class.parameters_to_filter)
       end
 
       request = Apidiesel::Request.new(action: self, action_arguments: args, parameters: params)

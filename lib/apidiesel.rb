@@ -1,5 +1,6 @@
 require 'uri'
 require 'httpi'
+require 'active_support/all'
 
 HTTPI.log = false
 
@@ -14,4 +15,3 @@ require 'apidiesel/action'
 require 'apidiesel/handlers/action_response_processor'
 require 'apidiesel/handlers/http_request_helper'
 require 'apidiesel/handlers/json'
-
