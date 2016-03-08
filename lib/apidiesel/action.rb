@@ -9,7 +9,7 @@ module Apidiesel
     class << self
       include Handlers
 
-      attr_reader :url_args
+      attr_reader :url_value, :url_args
 
       # Hash for storing validation closures. These closures are called with the request
       # parameters before the request is made and have the opportunity to check and modify them.
@@ -47,21 +47,78 @@ module Apidiesel
         end
       end
 
-      # Combined getter/setter for this actions URL
+      # Defines this Actions URL, or modifies the base URL set on `Api`
       #
-      # Falls back to the Api setting if blank.
+      # Given keyword arguments such as `path:` will be applied to
+      # the `URI` object supplied to `Api.url`.
       #
-      # @param [String] value
-      def url(value = nil, **args)
-        return @url unless value || args.any?
-
-        if value && value.is_a?(Proc)
-          @url = value
-        elsif value
-          @url = URI.parse(value)
-        else
-          @url_args = args
+      # Accepts a `Proc`, which will be called at request time with
+      # the URL constructed so far and the current `Request` object.
+      #
+      # A string value and all keyword arguments can contain
+      # placeholders for all arguments supplied to the action in
+      # Rubys standard `String.%` syntax.
+      #
+      # @example
+      #   class Api < Apidiesel::Api
+      #     url 'https://foo.example'
+      #
+      #     register_actions
+      #   end
+      #
+      #   module Actions
+      #     # modify the base URL set on `Api`
+      #     class ActionA < Apidiesel::Action
+      #       url path: '/action_a'
+      #     end
+      #
+      #     # replace the base URL set on `Api`
+      #     class ActionB < Apidiesel::Action
+      #       url 'https://subdomain.foo.example'
+      #     end
+      #
+      #     # modify the base URL set on `Api` with a
+      #     # 'username' argument placeholder
+      #     class ActionC < Apidiesel::Action
+      #       url path: '/action_c/%{username}'
+      #
+      #       expects do
+      #         string :username, submit: false
+      #       end
+      #     end
+      #
+      #     # dynamically determine the URL with a
+      #     # `Proc` object
+      #     class ActionD < Apidiesel::Action
+      #       url ->(url, request) {
+      #         url.path = '/' + request.action_arguments[:username]
+      #                                 .downcase
+      #         url
+      #       }
+      #
+      #       expects do
+      #         string :username, submit: false
+      #       end
+      #     end
+      #   end
+      #
+      # @overload url(value)
+      #   @param [String, URI] value a complete URL string or `URI`
+      #
+      # @overload url(**kargs)
+      #   @option **kargs [String] any method name valid on Rubys `URI::Generic`
+      #
+      # @overload url(value)
+      #   @param [Proc] value a callback that returns a URL string at request time.
+      #                       Receives the URL contructed so far and the current
+      #                       `Request` instance.
+      def url(value = nil, **kargs)
+        if value && kargs.any?
+          raise ArgumentError, "you cannot supply both argument and keyword args"
         end
+
+        @url_value  = value
+        @url_args   = kargs
       end
 
       # Combined getter/setter for the HTTP method used
@@ -128,29 +185,6 @@ module Apidiesel
       self.class.endpoint
     end
 
-    def base_url
-      if self.class.url.nil? || self.class.url.is_a?(Proc)
-        @api.class.url.dup
-      else
-        self.class.url.dup
-      end
-    end
-
-    def url
-      if self.class.url.is_a?(Proc)
-        url = self.class.url
-
-      elsif self.class.url_args
-        url = base_url
-
-        self.class.url_args.each do |key, value|
-          url.send("#{key}=", value)
-        end
-      end
-
-      url
-    end
-
     def http_method
       self.class.http_method || @api.class.http_method
     end
@@ -159,11 +193,9 @@ module Apidiesel
     # `expects` block, executes the API request and prepares the data according to the
     # actions `responds_with` block.
     #
-    # @param [Hash] *args see specific, non-abstract `Apidiesel::Action`
+    # @option **args see specific, non-abstract `Apidiesel::Action`
     # @return [Apidiesel::Request]
-    def build_request(*args)
-      args = args && args.first.is_a?(Hash) ? args.first : {}
-
+    def build_request(**args)
       params = {}
 
       self.class.parameter_validations.each do |validation|
@@ -174,7 +206,10 @@ module Apidiesel
         params = self.class.parameter_formatter.call(params)
       end
 
-      Apidiesel::Request.new action: self, parameters: params
+      request = Apidiesel::Request.new(action: self, action_arguments: args, parameters: params)
+      request.url = build_url(args, request)
+
+      request
     end
 
     def process_response(response_data)
@@ -207,6 +242,34 @@ module Apidiesel
     end
 
       protected
+
+    # @return [URI]
+    def build_url(action_arguments, request)
+      url = case self.class.url_value
+      when String
+        URI( self.class.url_value % action_arguments )
+      when URI
+        self.class.url_value
+      when Proc
+        self.class.url_value.call(base_url, request)
+      when nil
+        base_url
+      end
+
+      url_args = self.class.url_args.transform_values do |value|
+        value % action_arguments
+      end
+
+      url_args.each do |name, value|
+        url.send("#{name}=", value)
+      end
+
+      url
+    end
+
+    def base_url
+      @api.class.url.nil? ? URI('http://') : @api.class.url.dup
+    end
 
     # @return [Hash] Apidiesel configuration options
     def config
