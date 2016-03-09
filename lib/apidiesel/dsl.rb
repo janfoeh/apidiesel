@@ -270,6 +270,44 @@ module Apidiesel
       end
 
       # @!macro filter_types
+      #
+      # Please note that response value is typecasted to `String` for comparison, so that
+      # for absent values to be considered false, you have to include an empty string.
+      #
+      # @option kargs [Array<#to_s>, #to_s] :truthy ('true') values to be considered true
+      # @option kargs [Array<#to_s>, #to_s] :falsy ('false') values to be considered false
+      def boolean(*args, **kargs)
+        args = normalize_arguments(args, kargs)
+
+        args.reverse_merge!(truthy: 'true', falsy: 'false')
+
+        args[:truthy] = Array(args[:truthy]).map(&:to_s)
+        args[:falsy]  = Array(args[:falsy]).map(&:to_s)
+
+        response_formatters << lambda do |data, processed_data|
+          value = get_value(data, args[:at])
+
+          value = apply_filter(args[:prefilter], value)
+
+          value = if args[:truthy].include?(value.to_s)
+            true
+          elsif args[:falsy].include?(value.to_s)
+            false
+          else
+            nil
+          end
+
+          value = apply_filter(args[:postfilter] || args[:filter], value)
+
+          value = args[:map][value] if args[:map]
+
+          processed_data[ args[:as] ] = value
+
+          processed_data
+        end
+      end
+
+      # @!macro filter_types
       def string(*args, **kargs)
         create_primitive_formatter(:to_s, *args, **kargs)
       end
