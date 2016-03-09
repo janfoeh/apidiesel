@@ -569,7 +569,7 @@ module Apidiesel
       # @param [Symbol, Array] key
       def set_scope(key)
         response_filters << lambda do |data|
-          begin; fetch_path(data, *key); rescue => e; binding.pry; end
+          fetch_path(data, *key)
         end
       end
 
