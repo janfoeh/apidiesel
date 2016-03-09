@@ -191,7 +191,7 @@ module Apidiesel
     end
 
     def http_method
-      self.class.http_method || @api.class.http_method
+      self.class.http_method || @api.class.http_method || :get
     end
 
     # Performs the action-specific input validations on `*args` according to the actions
