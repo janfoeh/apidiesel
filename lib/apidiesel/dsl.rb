@@ -54,8 +54,10 @@ module Apidiesel
     # ExpectationBuilder defines the methods available within an `expects` block
     # when defining an API action.
     class ExpectationBuilder
+      # @!visibility private
       attr_accessor :parameter_validations, :parameters_to_filter
 
+      # @!visibility private
       def initialize
         @parameter_validations  = []
         @parameters_to_filter   = []
@@ -73,21 +75,22 @@ module Apidiesel
       #   # This action expects to be given an 'email', which is sent to the API as 'username',
       #   # and requires either a 'value1', a 'value2' or both to be present.
       #
-      # @param [Symbol] param_name name of the parameter
-      # @param [Hash] *args
-      # @option *args [Boolean] :optional (false) defines whether this parameter may be omitted
-      # @option *args [Symbol] :optional_if_present param_name is optional, if the parameter given here is present instead
-      # @option *args [Symbol] :required_if_present param_name is required if param_name is also present
-      # @option *args [Symbol] :submitted_as submit param_name to the API under the name given here
-      # @option *args [Object] :default a default parameter to be set when no value is specified
-      # @option *args [true, false] :submit set to `false` for arguments that should not be submitted
-      #                                     as API parameters. Defaults to `true`
-      # @option *args [Enumerable] :allowed_values only accept the values in this Enumerable.
-      #                             If Enumerable is a Hash, use the hash values to define what is actually
-      #                             sent to the server. Example: `:allowed_values => {:foo => "f"}` allows
-      #                             the value ':foo', but sends it as 'f'
-      def string(param_name, *args)
-        validation_builder(:to_s, param_name, *args)
+      # @!macro [new] expectation_types
+      #   @param param_name [Symbol] name of the parameter
+      #   @option args [Boolean] :optional (false) defines whether this parameter may be omitted
+      #   @option args [Symbol] :optional_if_present param_name is optional, if the parameter given here is present instead
+      #   @option args [Symbol] :required_if_present param_name is required if param_name is also present
+      #   @option args [Symbol] :submitted_as submit param_name to the API under the name given here
+      #   @option args [Object] :default a default parameter to be set when no value is specified
+      #   @option args [true, false] :submit (true) set to `false` for arguments that should not be submitted
+      #                                               as API parameters
+      #   @option args [Enumerable] :allowed_values only accept the values in this Enumerable.
+      #                               If Enumerable is a Hash, use the hash values to define what is actually
+      #                               sent to the server. Example: `:allowed_values => {:foo => "f"}` allows
+      #                               the value ':foo', but sends it as 'f'
+      #   @return [nil]
+      def string(param_name, **args)
+        validation_builder(:to_s, param_name, **args)
         parameters_to_filter << param_name if args[:submit] == false
       end
 
@@ -98,10 +101,9 @@ module Apidiesel
       #     integer :per_page, :optional => true
       #   end
       #
-      # @param (see #string)
-      # @option (see #string)
-      def integer(param_name, *args)
-        validation_builder(:to_i, param_name, *args)
+      # @!macro expectation_types
+      def integer(param_name, **args)
+        validation_builder(:to_i, param_name, **args)
         parameters_to_filter << param_name if args[:submit] == false
       end
 
@@ -114,10 +116,9 @@ module Apidiesel
       #     boolean :per_page, :optional => true
       #   end
       #
-      # @param (see #string)
-      # @option (see #string)
-      def boolean(param_name, *args)
-        validation_builder(:to_s, param_name, *args)
+      # @!macro expectation_types
+      def boolean(param_name, **args)
+        validation_builder(:to_s, param_name, **args)
         parameters_to_filter << param_name if args[:submit] == false
       end
 
@@ -129,9 +130,8 @@ module Apidiesel
       #     datetime :starts_at, format: '%d-%m-%Y'
       #   end
       #
-      # @param (see #string)
-      # @option *args [String] :format strftime format string
-      # @option (see #string)
+      # @!macro expectation_types
+      # @option args [String] :format a format string as supported by Rubys `#strftime`
       def datetime(param_name, **args)
         if args[:format]
           args[:processor] = ->(value) { value.try(:strftime, args[:format]) }
@@ -152,9 +152,8 @@ module Apidiesel
       #     object :contract, klass: Contract
       #   end
       #
-      # @param (see #string)
-      # @option *args [Class] :klass
-      # @option (see #string)
+      # @!macro expectation_types
+      # @option args [Class] :klass the expected class of the value
       def object(param_name, **args)
         type_check = ->(value, param_name) {
           unless value.is_a?(args[:klass])
@@ -168,8 +167,8 @@ module Apidiesel
 
         protected
 
-      def validation_builder(duck_typing_check, param_name, *args)
-        options = args.extract_options!
+      def validation_builder(duck_typing_check, param_name, **args)
+        options = args
 
         parameter_validations << lambda do |given_params, processed_params|
           if options[:default]
@@ -220,13 +219,38 @@ module Apidiesel
     # FilterBuilder defines the methods available within an `responds_with` block
     # when defining an API action.
     class FilterBuilder
+      # @!visibility private
       attr_accessor :response_filters, :response_formatters
 
+      # @!visibility private
       def initialize
         @response_filters    = []
         @response_formatters = []
       end
 
+      # @!macro [new] filter_types
+      #   Returns a $0 from the API response hash
+      #
+      #   @overload $0(key, **kargs)
+      #     Get the $0 named `key` from the response hash and name it `key` in the result hash
+      #
+      #     @param key [String, Symbol]
+      #     @option kargs [Proc] :prefilter callback for modifying the value before typecasting
+      #     @option kargs [Proc] :postfilter callback for modifying the value after typecasting
+      #     @option kargs [Proc] :filter alias for :postfilter
+      #     @option kargs [Hash] :map a hash map for replacing the value
+      #
+      #   @overload $0(at:, as:, **kargs)
+      #     Get the $0 named `at:` from the response hash and name it `as:` in the result hash
+      #
+      #     @param at [String, Symbol, Array<Symbol>] response hash key name or key path to lookup
+      #     @param as [String, Symbol] result hash key name to return the value as
+      #     @option kargs [Proc] :prefilter callback for modifying the value before typecasting
+      #     @option kargs [Proc] :postfilter callback for modifying the value after typecasting
+      #     @option kargs [Proc] :filter alias for :postfilter
+      #     @option kargs [Hash] :map a hash map for replacing the value
+      #
+      #   @return [nil]
       def value(*args, **kargs)
         args = normalize_arguments(args, kargs)
 
@@ -245,43 +269,27 @@ module Apidiesel
         end
       end
 
-      # Returns `key` from the API response as a string.
-      #
-      # @param [Symbol] key the key name to be returned as a string
-      # @param [Hash] *args
-      # @option *args [Symbol] :within look up the key in a namespace (nested hash)
+      # @!macro filter_types
       def string(*args, **kargs)
         create_primitive_formatter(:to_s, *args, **kargs)
       end
 
-      # Returns `key` from the API response as an integer.
-      #
-      # @param (see #string)
-      # @option (see #string)
+      # @!macro filter_types
       def integer(*args, **kargs)
         create_primitive_formatter(:to_i, *args, **kargs)
       end
 
-      # Returns `key` from the API response as a float.
-      #
-      # @param (see #string)
-      # @option (see #string)
+      # @!macro filter_types
       def float(*args, **kargs)
         create_primitive_formatter(:to_f, *args, **kargs)
       end
 
-      # Returns `key` from the API response as a symbol.
-      #
-      # @param (see #string)
-      # @option (see #string)
+      # @!macro filter_types
       def symbol(*args, **kargs)
         create_primitive_formatter(:to_sym, *args, **kargs)
       end
 
-      # Returns `key` from the API response as DateTime.
-      #
-      # @param (see #string)
-      # @option (see #string)
+      # @!macro filter_types
       def datetime(*args, **kargs)
         args = normalize_arguments(args, kargs)
         args.reverse_merge!(format: '%Y-%m-%d')
@@ -305,10 +313,7 @@ module Apidiesel
         end
       end
 
-      # Returns `key` from the API response as Date.
-      #
-      # @param (see #string)
-      # @option (see #string)
+      # @!macro filter_types
       def date(*args, **kargs)
         args = normalize_arguments(args, kargs)
         args.reverse_merge!(format: '%Y-%m-%d')
@@ -332,10 +337,7 @@ module Apidiesel
         end
       end
 
-      # Returns `key` from the API response as Time.
-      #
-      # @param (see #string)
-      # @option (see #string)
+      # @!macro filter_types
       def time(*args, **kargs)
         args = normalize_arguments(args, kargs)
         args.reverse_merge!(format: '%Y-%m-%d')
@@ -359,8 +361,7 @@ module Apidiesel
         end
       end
 
-      # Returns an array of subhashes
-      #
+      # @!macro filter_types
       # @example
       #
       #   # Given an API response:
@@ -384,6 +385,7 @@ module Apidiesel
       #     end
       #   end
       #
+      # @example
       #   # Given an API response:
       #   #
       #   # [
@@ -397,19 +399,12 @@ module Apidiesel
       #   #   },
       #   # ]
       #
-      # @example
       #   expects do
       #     array do
       #       string :name
       #       integer :order_id
       #     end
       #   end
-      #
-      # @option *args [Symbol] the key for finding and returning the array
-      #                        (sets both :as and :at)
-      # @option **kargs [Symbol] :at which key to find the hash at in the
-      #                              response
-      # @option **kargs [Symbol] :as which key to return the result under
       def array(*args, **kargs, &block)
         unless block.present?
           create_primitive_formatter(:to_a, *args, **kargs)
@@ -456,10 +451,7 @@ module Apidiesel
         end
       end
 
-      # Returns `key` from the API response as a hash.
-      #
-      # @param (see #string)
-      # @option (see #string)
+      # @!macro filter_types
       def hash(*args, **kargs, &block)
         unless block.present?
           create_primitive_formatter(:to_hash, *args, **kargs)
@@ -492,24 +484,24 @@ module Apidiesel
         end
       end
 
-      # Returns the API response processed or wrapped in wrapper objects.
-      #
       # @example
       #   responds_with do
-      #     object :issues, :processed_with => lambda { |data| data.delete_if { |k,v| k == 'www_id' } }
+      #     object :issues,
+      #             processed_with: ->(data) {
+      #               data.delete_if { |k,v| k == 'www_id' }
+      #             }
       #   end
       #
       # @example
       #
       #   responds_with do
-      #     object :issues, :wrapped_in => Apidiesel::ResponseObjects::Topic
+      #     object :issues,
+      #             wrapped_in: Apidiesel::ResponseObjects::Topic
       #   end
       #
-      # @param [Symbol] key the key name to be wrapped or processed
-      # @option *args [Symbol] :within look up the key in a namespace (nested hash)
-      # @option *args [Proc] :processed_with yield the data to this Proc for processing
-      # @option *args [Class] :wrapped_in wrapper object, will be called as `Object.create(data)`
-      # @option *args [Symbol] :as key name to save the result as
+      # @!macro filter_types
+      # @option kargs [Proc] :processed_with yield the data to this Proc for processing
+      # @option kargs [Class] :wrapped_in wrapper object, will be called as `Object.create(data)`
       def objects(*args, **kargs)
         args = normalize_arguments(args, kargs)
 
