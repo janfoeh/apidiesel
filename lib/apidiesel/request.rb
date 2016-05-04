@@ -25,7 +25,8 @@ module Apidiesel
       begin
         @result = action.process_response(response_body)
       rescue ResponseError => e
-        raise ResponseError.new(e.message, self)
+        e.request = self
+        raise e
       end
     end
 
