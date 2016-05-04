@@ -3,7 +3,7 @@ module Apidiesel
   class InputError < Error; end
 
   class RequestError < Error
-    attr_reader :request
+    attr_accessor :request
 
     def initialize(msg = nil, request = nil)
       @request = request
