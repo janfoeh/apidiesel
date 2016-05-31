@@ -595,7 +595,8 @@ module Apidiesel
 
       def error_message(message, data)
         return message if message.is_a?(String)
-        message.call(data)
+        return message.call(data) if message.respond_to?(:call)
+        'unknown error'
       end
 
       def create_primitive_formatter(cast_method_symbol, *args, **kargs)
