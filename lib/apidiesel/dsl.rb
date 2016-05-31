@@ -587,13 +587,17 @@ module Apidiesel
         response_formatters << lambda do |data, processed_data|
           return processed_data unless callable.call(data)
 
-          message = message.is_a?(String) ? message : message.call(data)
-
-          raise ResponseError.new(message)
+          raise ResponseError.new(error_message(message, data))
         end
       end
 
-        protected
+      protected
+
+      def error_message(message, data)
+        return message if message.is_a?(String)
+        return message.call(data) if message.respond_to?(:call)
+        'unknown error'
+      end
 
       def create_primitive_formatter(cast_method_symbol, *args, **kargs)
         args = normalize_arguments(args, kargs)
