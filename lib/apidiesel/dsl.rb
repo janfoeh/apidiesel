@@ -361,10 +361,12 @@ module Apidiesel
 
           value = apply_filter(args[:prefilter], value)
 
-          if args.has_key?(:on_error)
-            value = Date.strptime(value, args[:format]) rescue args[:on_error]
-          else
-            value = Date.strptime(value, args[:format])
+          if value.present?
+            if args.has_key?(:on_error)
+              value = Date.strptime(value, args[:format]) rescue args[:on_error]
+            else
+              value = Date.strptime(value, args[:format])
+            end
           end
 
           value = apply_filter(args[:postfilter] || args[:filter], value)
