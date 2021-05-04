@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Apidiesel
 
   # This is the abstract main interface class for the Apidiesel gem. It is meant to be

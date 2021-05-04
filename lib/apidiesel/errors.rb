@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Apidiesel
   class Error < StandardError; end
   class InputError < Error; end

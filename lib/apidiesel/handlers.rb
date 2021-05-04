@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Apidiesel
   module Handlers
     def request_handlers

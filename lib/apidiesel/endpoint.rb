@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Apidiesel
 
   # An abstract base class for API endpoints.

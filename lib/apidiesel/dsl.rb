@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Apidiesel
   module Dsl
     # Defines the input parameters expected for this API endpoint.

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "apidiesel"
 
 Dir[ File.join(__dir__, 'endpoints', '*.rb') ].each do |file|
