@@ -13,6 +13,13 @@ module Apidiesel
 
       attr_reader :url_value, :url_args
 
+      # We're passing along our configuration data contained in class instance vars
+      # to our subclasses. These are the variables we need to enumerate to do that.
+      INHERITABLE_CLASS_INSTANCE_VARS = [
+        :parameter_validations, :parameters_to_filter, :response_filters, :response_formatters,
+        :parameter_formatter, :endpoint, :url_value, :url_args, :http_method
+      ]
+
       # Array for storing parameter validation closures. These closures are called with the request
       # parameters before the request is made and have the opportunity to check and modify them.
       def parameter_validations
@@ -139,6 +146,14 @@ module Apidiesel
           @http_method = value
         else
           @http_method
+        end
+      end
+
+      # When subclassed, we copy our configuration into the subclass
+      def inherited(subclass)
+        INHERITABLE_CLASS_INSTANCE_VARS.map { |var_name| "@#{var_name}" }
+                                       .each do |var_name|
+          subclass.instance_variable_set(var_name, instance_variable_get(var_name).dup)
         end
       end
     end
