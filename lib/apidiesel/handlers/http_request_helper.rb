@@ -29,14 +29,14 @@ module Apidiesel
         request.http_request = http_request
 
         begin
-          response = HTTPI.request(request.action.http_method, http_request)
+          response = HTTPI.request(request.endpoint.http_method, http_request)
           request.http_response = response
         rescue => e
           raise RequestError.new(e, request)
         end
 
         if response.error?
-          raise RequestError.new("#{request.action.http_method} #{request.url} returned #{response.code}", request)
+          raise RequestError.new("#{request.endpoint.http_method} #{request.url} returned #{response.code}", request)
         end
 
         request

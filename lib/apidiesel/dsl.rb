@@ -1,6 +1,6 @@
 module Apidiesel
   module Dsl
-    # Defines the input parameters expected for this API action.
+    # Defines the input parameters expected for this API endpoint.
     #
     # @example
     #   expects do
@@ -20,7 +20,7 @@ module Apidiesel
       parameters_to_filter.concat builder.parameters_to_filter
     end
 
-    # Defines the expected content and format of the response for this API action.
+    # Defines the expected content and format of the response for this API endpoint.
     #
     # @example
     #   responds_with do
@@ -52,7 +52,7 @@ module Apidiesel
     end
 
     # ExpectationBuilder defines the methods available within an `expects` block
-    # when defining an API action.
+    # when defining an API endpoint.
     class ExpectationBuilder
       # @!visibility private
       attr_accessor :parameter_validations, :parameters_to_filter
@@ -72,7 +72,7 @@ module Apidiesel
       #     string :value2, :optional_if_present => :value1
       #   end
       #
-      #   # This action expects to be given an 'email', which is sent to the API as 'username',
+      #   # This endpoint expects to be given an 'email', which is sent to the API as 'username',
       #   # and requires either a 'value1', a 'value2' or both to be present.
       #
       # @!macro [new] expectation_types
@@ -217,7 +217,7 @@ module Apidiesel
     end
 
     # FilterBuilder defines the methods available within an `responds_with` block
-    # when defining an API action.
+    # when defining an API endpoint.
     class FilterBuilder
       # @!visibility private
       attr_accessor :response_filters, :response_formatters

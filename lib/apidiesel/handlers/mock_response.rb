@@ -3,12 +3,12 @@ module Apidiesel
     module MockResponse
       class RequestHandler
         def run(request, api_config)
-          action = request.action
+          endpoint = request.endpoint
 
-          return request unless action.respond_to?(:mock_response) && action.mock_response
+          return request unless endpoint.respond_to?(:mock_response) && endpoint.mock_response
 
-          file_name = action.mock_response[:file]
-          parser    = action.mock_response[:parser]
+          file_name = endpoint.mock_response[:file]
+          parser    = endpoint.mock_response[:parser]
           file      = File.read(file_name)
 
           request.response_body = if parser
@@ -28,7 +28,7 @@ module Apidiesel
         end
       end
 
-      module ActionExtension
+      module EndpointExtension
         extend ActiveSupport::Concern
 
         class_methods do
@@ -52,4 +52,4 @@ module Apidiesel
   end
 end
 
-Apidiesel::Action.send(:include, Apidiesel::Handlers::MockResponse::ActionExtension)
+Apidiesel::Endpoint.send(:include, Apidiesel::Handlers::MockResponse::EndpointExtension)

@@ -1,7 +1,7 @@
 module Apidiesel
 
   # An abstract base class for API endpoints.
-  class Action
+  class Endpoint
     extend Dsl
 
     # accessors for class instance variables
@@ -17,7 +17,7 @@ module Apidiesel
         @parameter_validations ||= []
       end
 
-      # Array for storing action argument names which are not to be submitted as parameters
+      # Array for storing endpoint argument names which are not to be submitted as parameters
       def parameters_to_filter
         @parameters_to_filter ||= []
       end
@@ -41,7 +41,8 @@ module Apidiesel
         @parameter_formatter
       end
 
-      # Combined getter/setter for this actions' endpoint
+      # Combined getter/setter for this endpoints' endpoint
+      # TODO rewrite
       #
       # @param [String] value
       def endpoint(value = nil)
@@ -52,7 +53,7 @@ module Apidiesel
         end
       end
 
-      # Defines this Actions URL, or modifies the base URL set on `Api`
+      # Defines this Endpoints URL, or modifies the base URL set on `Api`
       #
       # Given keyword arguments such as `path:` will be applied to
       # the `URI` object supplied to `Api.url`.
@@ -61,31 +62,31 @@ module Apidiesel
       # the URL constructed so far and the current `Request` object.
       #
       # A string value and all keyword arguments can contain
-      # placeholders for all arguments supplied to the action in
+      # placeholders for all arguments supplied to the endpoint in
       # Rubys standard `String.%` syntax.
       #
       # @example
       #   class Api < Apidiesel::Api
       #     url 'https://foo.example'
       #
-      #     register_actions
+      #     register_endpoints
       #   end
       #
-      #   module Actions
+      #   module Endpoints
       #     # modify the base URL set on `Api`
-      #     class ActionA < Apidiesel::Action
-      #       url path: '/action_a'
+      #     class EndpointA < Apidiesel::Endpoint
+      #       url path: '/endpoint_a'
       #     end
       #
       #     # replace the base URL set on `Api`
-      #     class ActionB < Apidiesel::Action
+      #     class EndpointB < Apidiesel::Endpoint
       #       url 'https://subdomain.foo.example'
       #     end
       #
       #     # modify the base URL set on `Api` with a
       #     # 'username' argument placeholder
-      #     class ActionC < Apidiesel::Action
-      #       url path: '/action_c/%{username}'
+      #     class EndpointC < Apidiesel::Endpoint
+      #       url path: '/endpoint_c/%{username}'
       #
       #       expects do
       #         string :username, submit: false
@@ -94,9 +95,9 @@ module Apidiesel
       #
       #     # dynamically determine the URL with a
       #     # `Proc` object
-      #     class ActionD < Apidiesel::Action
+      #     class EndpointD < Apidiesel::Endpoint
       #       url ->(url, request) {
-      #         url.path = '/' + request.action_arguments[:username]
+      #         url.path = '/' + request.endpoint_arguments[:username]
       #                                 .downcase
       #         url
       #       }
@@ -142,15 +143,15 @@ module Apidiesel
 
     attr_accessor :api
 
-    # Hook method that is called by {Apidiesel::Api} to register this Action on itself.
+    # Hook method that is called by {Apidiesel::Api} to register this Endpoint on itself.
     #
-    # Example: when {Apidiesel::Api} calls this method inherited on {Apidiesel::Actions::Foo},
-    # it itself gains a `Apidiesel::Api#foo` instance method to instantiate and call the Foo action.
+    # Example: when {Apidiesel::Api} calls this method inherited on {Apidiesel::Endpoints::Foo},
+    # it itself gains a `Apidiesel::Api#foo` instance method to instantiate and call the Foo endpoint.
     #
     # Executed in {Apidiesel::Api} through
     #
-    #   Apidiesel::Actions.constants.each do |action|
-    #     Apidiesel::Actions.const_get(action).register(self)
+    #   Apidiesel::Endpoints.constants.each do |endpoint|
+    #     Apidiesel::Endpoints.const_get(endpoint).register(self)
     #   end
     def self.register(caller)
       caller.class_eval <<-EOT
@@ -164,7 +165,7 @@ module Apidiesel
 
     # Returns current class name formatted for use as a method name
     #
-    # Example: {Apidiesel::Actions::Foo} will return `foo`
+    # Example: {Apidiesel::Endpoints::Foo} will return `foo`
     #
     # @return [String] the demodulized, underscored name of the current Class
     def self.name_as_method
@@ -179,7 +180,7 @@ module Apidiesel
     end
 
     # Getter/setter for the parameters to be used for creating the API request. Prefilled
-    # with the `op` action key.
+    # with the `op` endpoint key.
     #
     # @return [Hash]
     def parameters
@@ -194,11 +195,11 @@ module Apidiesel
       self.class.http_method || @api.class.http_method || :get
     end
 
-    # Performs the action-specific input validations on `*args` according to the actions
+    # Performs the endpoint-specific input validations on `*args` according to the endpoints
     # `expects` block, executes the API request and prepares the data according to the
-    # actions `responds_with` block.
+    # endpoints `responds_with` block.
     #
-    # @option **args see specific, non-abstract `Apidiesel::Action`
+    # @option **args see specific, non-abstract `Apidiesel::Endpoint`
     # @return [Apidiesel::Request]
     def build_request(**args)
       params = {}
@@ -213,7 +214,7 @@ module Apidiesel
         params.except!(*self.class.parameters_to_filter)
       end
 
-      request = Apidiesel::Request.new(action: self, action_arguments: args, parameters: params)
+      request = Apidiesel::Request.new(endpoint: self, endpoint_arguments: args, parameters: params)
       request.url = build_url(args, request)
 
       request
@@ -251,10 +252,10 @@ module Apidiesel
       protected
 
     # @return [URI]
-    def build_url(action_arguments, request)
+    def build_url(endpoint_arguments, request)
       url = case self.class.url_value
       when String
-        URI( self.class.url_value % action_arguments )
+        URI( self.class.url_value % endpoint_arguments )
       when URI
         self.class.url_value
       when Proc
@@ -264,7 +265,7 @@ module Apidiesel
       end
 
       url_args = self.class.url_args.transform_values do |value|
-        value % action_arguments
+        value % endpoint_arguments
       end
 
       url_args.each do |name, value|

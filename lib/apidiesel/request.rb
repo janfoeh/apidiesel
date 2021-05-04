@@ -2,17 +2,17 @@ module Apidiesel
 
   # Wrapper for API requests
   class Request
-    attr_accessor :action, :action_arguments, :parameters, :url, :response_body, :http_request, :http_response, :metadata, :result
+    attr_accessor :endpoint, :endpoint_arguments, :parameters, :url, :response_body, :http_request, :http_response, :metadata, :result
 
-    # @param [Apidiesel::Action] action
-    # @param [Hash] action_arguments
+    # @param [Apidiesel::Endpoint] endpoint
+    # @param [Hash] endpoint_arguments
     # @param [Hash] parameters
     # @param [Hash] metadata
-    def initialize(action:, action_arguments:, parameters:, metadata: {})
-      @action           = action
-      @action_arguments = action_arguments
-      @parameters       = parameters
-      @metadata         = metadata
+    def initialize(endpoint:, endpoint_arguments:, parameters:, metadata: {})
+      @endpoint           = endpoint
+      @endpoint_arguments = endpoint_arguments
+      @parameters         = parameters
+      @metadata           = metadata
     end
 
     def response_body
@@ -23,7 +23,7 @@ module Apidiesel
       # Reraise ResponseErrors to include ourselves. Not
       # pretty, but I can't think of anything nicer right now
       begin
-        @result = action.process_response(response_body)
+        @result = endpoint.process_response(response_body)
       rescue ResponseError => e
         e.request = self
         raise e
@@ -33,9 +33,9 @@ module Apidiesel
     def to_s
       [
         "Apidiesel::Request",
-        action.http_method.to_s.upcase,
+        endpoint.http_method.to_s.upcase,
         url.try(:to_s),
-        action.endpoint,
+        endpoint.endpoint,
         parameters.collect { |key, value| "#{key}: #{value}"}.join(',')
       ].join(' ')
     end

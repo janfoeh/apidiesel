@@ -23,12 +23,12 @@ Or install it yourself as:
 
 ## Usage
 
-Apidiesel consists of three main parts: the base `Api`, one `Action` for each API
+Apidiesel consists of three main parts: the base `Api`, one `Endpoint` for each API
 endpoint and `Handler` plugins for processing incoming and outgoing data.
 
 ```ruby
-module Actions
-  class GetUsers < Apidiesel::Action
+module Endpoints
+  class GetUsers < Apidiesel::Endpoint
     url path: '/users'
 
     expects do
@@ -47,7 +47,7 @@ class Api < Apidiesel::Api
   url 'https://foo.example'
   http_method :post
 
-  register_actions
+  register_endpoints
 end
 
 api = Api.new

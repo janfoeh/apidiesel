@@ -8,21 +8,21 @@ module Apidiesel
   #     end
   #   end
   #
-  # Apidiesel expects there to be an `Actions` namespace alongside the same scope,
+  # Apidiesel expects there to be an `Endpoints` namespace alongside the same scope,
   # in which it can find the individual endpoint definitions for this API:
   #
   #   module MyApi
   #     class Api < Apidiesel::Api
   #     end
   #
-  #     module Actions
-  #       class Action1; end
-  #       class Action2; end
+  #     module Endpoints
+  #       class Endpoint1; end
+  #       class Endpoint2; end
   #     end
   #   end
   #
-  #   # Registers endpoints Action1 and Action2
-  #   MyApi::Api.register_actions
+  #   # Registers endpoints Endpoint1 and Endpoint2
+  #   MyApi::Api.register_endpoints
   #
   class Api
     class << self
@@ -38,7 +38,7 @@ module Apidiesel
         end
       end
 
-      # Combined getter/setter for this actions URL
+      # Combined getter/setter for this endpoints URL
       #
       # Falls back to the Api setting if blank.
       #
@@ -80,11 +80,11 @@ module Apidiesel
       end
 
       # Registers the individual API endpoint definitions
-      def register_actions
-        namespace = "#{self.name.deconstantize}::Actions".safe_constantize
+      def register_endpoints
+        namespace = "#{self.name.deconstantize}::Endpoints".safe_constantize
 
-        namespace.constants.each do |action|
-          namespace.const_get(action).register(self)
+        namespace.constants.each do |endpoint|
+          namespace.const_get(endpoint).register(self)
         end
       end
 
@@ -108,14 +108,14 @@ module Apidiesel
 
       protected
 
-    def execute_request(action_klass, *args)
-      request = action_klass.new(self).build_request(*args)
+    def execute_request(endpoint_klass, *args)
+      request = endpoint_klass.new(self).build_request(*args)
 
       request_handlers =
-        action_klass.request_handlers.any? ? action_klass.request_handlers : self.class.request_handlers
+        endpoint_klass.request_handlers.any? ? endpoint_klass.request_handlers : self.class.request_handlers
 
       response_handlers =
-        action_klass.response_handlers.any? ? action_klass.response_handlers : self.class.response_handlers
+        endpoint_klass.response_handlers.any? ? endpoint_klass.response_handlers : self.class.response_handlers
 
       request_handlers.each do |handler|
         request = handler.run(request, @config)
@@ -133,17 +133,17 @@ module Apidiesel
       response_handler_klasses =
         response_handlers.collect { |handler| handler.class.name.split('::')[-2] }
 
-      # Execute the actions' `responds_with` block automatically, unless
+      # Execute the endpoints' `responds_with` block automatically, unless
       # the handler has been included manually in order to control the
       # order in which the handlers are run
-      unless response_handler_klasses.include?('ActionResponseProcessor')
+      unless response_handler_klasses.include?('ResponseProcessor')
         request.process_response
       end
 
       request
     rescue => e
       exception_handlers =
-        action_klass.exception_handlers.any? ? action_klass.exception_handlers : self.class.exception_handlers
+        endpoint_klass.exception_handlers.any? ? endpoint_klass.exception_handlers : self.class.exception_handlers
 
       exception_handlers.each do |handler|
         request = handler.run(e, request, @config)

@@ -1,6 +1,6 @@
 require "apidiesel"
 
-Dir[ File.join(__dir__, 'actions', '*.rb') ].each do |file|
+Dir[ File.join(__dir__, 'endpoints', '*.rb') ].each do |file|
   require file
 end
 
@@ -10,6 +10,6 @@ module Github
 
     url 'https://api.github.com'
 
-    register_actions
+    register_endpoints
   end
 end

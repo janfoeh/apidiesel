@@ -1,6 +1,6 @@
 module Github
-  module Actions
-    class GetUserRepos < Apidiesel::Action
+  module Endpoints
+    class GetUserRepos < Apidiesel::Endpoint
       url path: '/users/%{username}/repos'
 
       expects do
