@@ -97,9 +97,9 @@ module Apidiesel
       end
     end
 
-    # @param [Hash] *args
-    def initialize(*args)
-      @config = args.extract_options!.reverse_merge(self.class.config)
+    # @param **kargs [Hash]
+    def initialize(**kargs)
+      @config = kargs.reverse_merge(self.class.config)
     end
 
     def logger
@@ -108,8 +108,8 @@ module Apidiesel
 
       protected
 
-    def execute_request(endpoint_klass, *args)
-      request = endpoint_klass.new(self).build_request(*args)
+    def execute_request(endpoint_klass, *args, **kargs)
+      request = endpoint_klass.new(self).build_request(*args, **kargs)
 
       request_handlers =
         endpoint_klass.request_handlers.any? ? endpoint_klass.request_handlers : self.class.request_handlers
