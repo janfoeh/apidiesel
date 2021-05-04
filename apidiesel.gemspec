@@ -24,11 +24,11 @@ Gem::Specification.new do |spec|
   spec.add_runtime_dependency 'httpi', '>= 2.4.1'
 
   spec.add_development_dependency "bundler", "~> 2.2"
-  spec.add_development_dependency "rake", "~> 10.0"
+  spec.add_development_dependency "rake", "~> 13.0"
   spec.add_development_dependency "redcarpet", "~> 3.3"
   spec.add_development_dependency "yard", "~> 0.8"
-  spec.add_development_dependency "pry", "~> 0.10"
-  spec.add_development_dependency 'pry-byebug', '~> 3.2.0'
+  spec.add_development_dependency "pry", "~> 0.13"
+  spec.add_development_dependency 'pry-byebug', '~> 3.9'
   spec.add_development_dependency 'pry-rescue', '~> 1.4'
-  spec.add_development_dependency 'pry-stack_explorer', '~> 0.4.9'
+  spec.add_development_dependency 'pry-stack_explorer', '~> 0.6'
 end
