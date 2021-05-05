@@ -107,6 +107,18 @@ module Apidiesel
       @config = kargs.reverse_merge(self.class.config)
     end
 
+    def url
+      config[:url]
+    end
+
+    def http_method
+      config[:http_method]
+    end
+
+    def http_basic_auth
+      config[:http_basic_auth]
+    end
+
     def logger
       self.class.logger
     end

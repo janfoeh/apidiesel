@@ -217,7 +217,7 @@ module Apidiesel
     end
 
     def http_method
-      self.class.http_method || @api.class.http_method || :get
+      self.class.http_method || @api.http_method || :get
     end
 
     # Performs the endpoint-specific input validations on `*args` according to the endpoints
@@ -313,7 +313,7 @@ module Apidiesel
     end
 
     def base_url
-      @api.class.url.nil? ? URI('http://') : @api.class.url.dup
+      @api.url.nil? ? URI('http://') : @api.url.dup
     end
 
     # @return [Hash] Apidiesel configuration options
