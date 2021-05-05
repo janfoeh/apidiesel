@@ -161,7 +161,7 @@ module Apidiesel
 
     # Hook method that is called by {Apidiesel::Api} to register this Endpoint on itself.
     #
-    # Example: when {Apidiesel::Api} calls this method inherited on {Apidiesel::Endpoints::Foo},
+    # Example: when {Apidiesel::Api} calls this method inherited on `Apidiesel::Endpoints::Foo`,
     # it itself gains a `Apidiesel::Api#foo` instance method to instantiate and call the Foo endpoint.
     #
     # Executed in {Apidiesel::Api} through

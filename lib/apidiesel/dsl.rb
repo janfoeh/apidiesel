@@ -67,15 +67,15 @@ module Apidiesel
 
       # Defines a string parameter.
       #
-      # @example
-      #   expects do
-      #     string :email, :submitted_as => :username
-      #     string :value1, :optional_if_present => :value2
-      #     string :value2, :optional_if_present => :value1
-      #   end
-      #
-      #   # This endpoint expects to be given an 'email', which is sent to the API as 'username',
-      #   # and requires either a 'value1', a 'value2' or both to be present.
+      # ```ruby
+      # # This endpoint expects to be given an 'email', which is sent to the API as 'username',
+      # # and requires either a 'value1', a 'value2' or both to be present.
+      # expects do
+      #   string :email, :submitted_as => :username
+      #   string :value1, :optional_if_present => :value2
+      #   string :value2, :optional_if_present => :value1
+      # end
+      # ``
       #
       # @!macro [new] expectation_types
       #   @param param_name [Symbol] name of the parameter

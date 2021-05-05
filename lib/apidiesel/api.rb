@@ -99,7 +99,7 @@ module Apidiesel
       end
     end
 
-    # @param **kargs [Hash]
+    # @param kargs [Hash]
     def initialize(**kargs)
       @config = kargs.reverse_merge(self.class.config)
     end
