@@ -80,10 +80,13 @@ module Apidiesel
       # @!macro [new] expectation_types
       #   @param param_name [Symbol] name of the parameter
       #   @option args [Boolean] :optional (false) defines whether this parameter may be omitted
-      #   @option args [Symbol] :optional_if_present param_name is optional, if the parameter given here is present instead
-      #   @option args [Symbol] :required_if_present param_name is required if param_name is also present
-      #   @option args [Symbol] :submitted_as submit param_name to the API under the name given here
-      #   @option args [Object] :default a default parameter to be set when no value is specified
+      #   @option args [Symbol]  :optional_if_present param_name is optional, if the parameter given here is present instead
+      #   @option args [Symbol]  :required_if_present param_name is required if param_name is also present
+      #   @option args [Symbol]  :submitted_as submit param_name to the API under the name given here
+      #   @option args [Object]  :default a default parameter to be set when no value is specified
+      #   @option args [Boolean] :fetch_from_base if not provided by the caller, query the base
+      #     `Apidiesel::Api` object for it. It will be taken from either `config[<parameter_name>]`, or the return
+      #     value of a method with the same name
       #   @option args [true, false] :submit (true) set to `false` for arguments that should not be submitted
       #                                               as API parameters
       #   @option args [Enumerable] :allowed_values only accept the values in this Enumerable.
@@ -172,7 +175,17 @@ module Apidiesel
       def validation_builder(duck_typing_check, param_name, **args)
         options = args
 
-        parameter_validations << lambda do |given_params, processed_params|
+        parameter_validations << lambda do |api, given_params, processed_params|
+          given_value = given_params[param_name]
+
+          if options[:fetch_from_base] && given_value.nil?
+            if api.config[param_name]
+              given_value = api.config[param_name]
+            elsif api.respond_to?(param_name)
+              given_value = api.send(param_name)
+            end
+          end
+
           if options[:default]
             given_params[param_name] ||= options[:default]
           end
@@ -189,30 +202,30 @@ module Apidiesel
             raise Apidiesel::InputError, "missing arg: #{param_name} - options: #{options.inspect}" unless given_params.has_key?(param_name) && !given_params[param_name].nil?
 
             if duck_typing_check.is_a?(Proc)
-              duck_typing_check.call(given_params[param_name], param_name)
+              duck_typing_check.call(given_value, param_name)
             else
-              raise Apidiesel::InputError, "invalid arg #{param_name}: must respond to #{duck_typing_check}" unless given_params[param_name].respond_to?(duck_typing_check)
+              raise Apidiesel::InputError, "invalid arg #{param_name}: must respond to #{duck_typing_check}" unless given_value.respond_to?(duck_typing_check)
             end
           end
 
-          if options.has_key?(:allowed_values) && !given_params[param_name].blank?
-            unless options[:allowed_values].include?(given_params[param_name])
-              raise Apidiesel::InputError, "value '#{given_params[param_name]}' is not a valid value for #{param_name}"
+          if options.has_key?(:allowed_values) && !given_value.blank?
+            unless options[:allowed_values].include?(given_value)
+              raise Apidiesel::InputError, "value '#{given_value}' is not a valid value for #{param_name}"
             end
 
             if options[:allowed_values].is_a? Hash
-              given_params[param_name] = options[:allowed_values][ given_params[param_name] ]
+              given_value = options[:allowed_values][ given_value ]
             end
           end
 
           if options[:processor]
-            given_params[param_name] = options[:processor].call(given_params[param_name])
+            given_value = options[:processor].call(given_value)
           end
 
           if options[:submitted_as]
-            processed_params[ options[:submitted_as] ] = given_params[param_name]
+            processed_params[ options[:submitted_as] ] = given_value
           else
-            processed_params[param_name] = given_params[param_name]
+            processed_params[param_name] = given_value
           end
         end
       end

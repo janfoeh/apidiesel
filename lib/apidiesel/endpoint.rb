@@ -221,7 +221,7 @@ module Apidiesel
       params = {}
 
       self.class.parameter_validations.each do |validation|
-        validation.call(args, params)
+        validation.call(api, args, params)
       end
 
       if self.class.parameter_formatter

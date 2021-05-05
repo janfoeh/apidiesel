@@ -27,6 +27,9 @@ module Apidiesel
   #   MyApi::Api.register_endpoints
   #
   class Api
+    # @return [Hash{Symbol=>Object}]
+    attr_reader :config
+
     class << self
       include Handlers
 
