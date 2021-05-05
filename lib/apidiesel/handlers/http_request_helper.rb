@@ -7,10 +7,10 @@ module Apidiesel
 
       # Executes a HTTP request
       #
-      # @param [Apidiesel::Request] request
-      # @param [Hash] payload the request body
-      # @param [Hash] api_config the configuration data of the Apidiesel::Api
-      #               instance, as given to the handlers #run method
+      # @param request    [Apidiesel::Request]
+      # @param payload    [Hash]  the request body
+      # @param api_config [Hash]  the configuration data of the Apidiesel::Api
+      #   instance, as given to the handlers #run method
       #
       def execute_request(request:, payload:, api_config:)
         http_request      = HTTPI::Request.new(request.url.try(:to_s))

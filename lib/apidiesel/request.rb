@@ -6,10 +6,11 @@ module Apidiesel
   class Request
     attr_accessor :endpoint, :endpoint_arguments, :parameters, :url, :response_body, :http_request, :http_response, :metadata, :result
 
-    # @param [Apidiesel::Endpoint] endpoint
-    # @param [Hash] endpoint_arguments
-    # @param [Hash] parameters
-    # @param [Hash] metadata
+    # @param endpoint           [Apidiesel::Endpoint]
+    # @param endpoint_arguments [Hash]
+    # @param parameters         [Hash]
+    # @param metadata           [Hash]
+    # @return [self]
     def initialize(endpoint:, endpoint_arguments:, parameters:, metadata: {})
       @endpoint           = endpoint
       @endpoint_arguments = endpoint_arguments

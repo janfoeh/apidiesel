@@ -20,7 +20,7 @@ module Apidiesel
         :parameter_formatter, :endpoint, :url_value, :url_args, :http_method
       ]
 
-      # Array for storing parameter validation closures. These closures are called with the request
+      # Array for storing parameter validation procs. These procs are called with the request
       # parameters before the request is made and have the opportunity to check and modify them.
       def parameter_validations
         @parameter_validations ||= []
@@ -31,7 +31,7 @@ module Apidiesel
         @parameters_to_filter ||= []
       end
 
-      # Array for storing filter closures. These closures are called with the received data
+      # Array for storing filter procs. These procs are called with the received data
       # after a request is made and have the opportunity to modify or check it before the
       # data is returned
       def response_filters
@@ -53,7 +53,7 @@ module Apidiesel
       # Combined getter/setter for this endpoints' endpoint
       # TODO rewrite
       #
-      # @param [String] value
+      # @param value [String]
       def endpoint(value = nil)
         if value
           @endpoint = value
@@ -118,15 +118,14 @@ module Apidiesel
       #   end
       #
       # @overload url(value)
-      #   @param [String, URI] value a complete URL string or `URI`
+      #   @param value [String, URI] a complete URL string or `URI`
       #
       # @overload url(**kargs)
       #   @option **kargs [String] any method name valid on Rubys `URI::Generic`
       #
       # @overload url(value)
-      #   @param [Proc] value a callback that returns a URL string at request time.
-      #                       Receives the URL contructed so far and the current
-      #                       `Request` instance.
+      #   @param value [Proc] a callback that returns a URL string at request time.
+      #     Receives the URL contructed so far and the current `Request` instance.
       def url(value = nil, **kargs)
         if value && kargs.any?
           raise ArgumentError, "you cannot supply both argument and keyword args"
@@ -140,7 +139,7 @@ module Apidiesel
       #
       # Falls back to the Api setting if blank.
       #
-      # @param [String] value
+      # @param value [String]
       def http_method(value = nil)
         if value
           @http_method = value
@@ -191,7 +190,7 @@ module Apidiesel
 
       public
 
-    # @param [Apidiesel::Api] api A reference to the parent Api object
+    # @param api [Apidiesel::Api] a reference to the parent Api object
     def initialize(api)
       @api = api
     end

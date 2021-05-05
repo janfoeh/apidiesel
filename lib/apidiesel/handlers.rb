@@ -16,7 +16,10 @@ module Apidiesel
 
     # Registers a handler for requests, responses and/or exceptions
     #
-    # @param [Class] klass
+    # @param klass    [Class]
+    # @param *args    [Array<Object>] passed through to the handler
+    # @param **kargs  [Hash] passed through to the handler
+    # @return [void]
     def use(klass, *args, &block)
       request_handler   = "#{klass.name}::RequestHandler".safe_constantize
       response_handler  = "#{klass.name}::ResponseHandler".safe_constantize

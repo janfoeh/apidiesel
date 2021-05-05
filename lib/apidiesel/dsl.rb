@@ -568,7 +568,7 @@ module Apidiesel
       #
       # Useful for cutting out useless top-level keys
       #
-      # @param [Symbol, Array] key
+      # @param key [Symbol, Array]
       def set_scope(key)
         response_filters << lambda do |data|
           fetch_path(data, *key)
@@ -582,8 +582,8 @@ module Apidiesel
       #     response_error_if ->(data) { data[:code] != 0 },
       #                       message: ->(data) { data[:message] }
       #
-      # @param [Lambda, Proc] callable
-      # @param [String, Lambda, Proc] message
+      # @param callable [Lambda, Proc]
+      # @param message  [String, Lambda, Proc]
       # @raise [Apidiesel::ResponseError]
       def response_error_if(callable, message:)
         response_formatters << lambda do |data, processed_data|

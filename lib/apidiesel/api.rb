@@ -44,7 +44,7 @@ module Apidiesel
       #
       # Falls back to the Api setting if blank.
       #
-      # @param [String] base_url
+      # @param base_url [String]
       def url(base_url = nil)
         if base_url
           config[:url] = URI.parse(base_url)
@@ -57,7 +57,7 @@ module Apidiesel
       #
       # Falls back to the Api setting if blank.
       #
-      # @param [String] value
+      # @param value [String]
       def http_method(value = nil)
         if value
           config[:http_method] = value
@@ -70,8 +70,8 @@ module Apidiesel
       #
       # Falls back to the Api setting if blank.
       #
-      # @param [String] username
-      # @param [String] password
+      # @param username [String]
+      # @param password [String]
       def http_basic_auth(username = nil, password = nil)
         if username && password
           config[:http_basic_username] = username
