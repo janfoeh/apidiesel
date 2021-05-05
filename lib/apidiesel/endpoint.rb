@@ -293,6 +293,18 @@ module Apidiesel
         value % endpoint_arguments
       end
 
+      if append_path = url_args.delete(:append_path)
+        url_string = url.to_s
+
+        unless url_string.end_with?("/")
+          url_string << "/"
+        end
+
+        append_path.delete_prefix!("/")
+
+        url = URI.join(url_string, append_path)
+      end
+
       url_args.each do |name, value|
         url.send("#{name}=", value)
       end
