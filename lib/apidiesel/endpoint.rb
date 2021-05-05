@@ -12,6 +12,7 @@ module Apidiesel
       include Handlers
 
       attr_reader :url_value, :url_args
+      attr_accessor :label
 
       # We're passing along our configuration data contained in class instance vars
       # to our subclasses. These are the variables we need to enumerate to do that.
@@ -19,6 +20,14 @@ module Apidiesel
         :parameter_validations, :parameters_to_filter, :response_filters, :response_formatters,
         :parameter_formatter, :endpoint, :url_value, :url_args, :http_method
       ]
+
+      def actions
+        @actions ||= []
+      end
+
+      def for(label)
+        actions.find { |action| action.label == label }
+      end
 
       # Array for storing parameter validation procs. These procs are called with the request
       # parameters before the request is made and have the opportunity to check and modify them.
@@ -171,8 +180,8 @@ module Apidiesel
     #   end
     def self.register(caller)
       caller.class_eval <<-EOT
-        def #{name_as_method}(*args)
-          execute_request(#{name}, *args)
+        def #{name_as_method}(*args, action: nil, **kargs)
+          execute_request(#{name}, *args, action: action, **kargs)
         end
       EOT
     end

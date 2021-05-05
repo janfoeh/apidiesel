@@ -113,8 +113,14 @@ module Apidiesel
 
       protected
 
-    def execute_request(endpoint_klass, *args, **kargs)
-      request = endpoint_klass.new(self).build_request(*args, **kargs)
+    def execute_request(endpoint_klass, *args, action: nil, **kargs)
+      request =
+        if action
+          endpoint_klass.for(action)
+                        .new(self).build_request(*args, **kargs)
+        else
+          endpoint_klass.new(self).build_request(*args, **kargs)
+        end
 
       request_handlers =
         endpoint_klass.request_handlers.any? ? endpoint_klass.request_handlers : self.class.request_handlers

@@ -53,6 +53,13 @@ module Apidiesel
       end
     end
 
+    def action(label, &block)
+      subklass       = Class.new(self, &block)
+      subklass.label = label
+
+      actions << subklass
+    end
+
     # ExpectationBuilder defines the methods available within an `expects` block
     # when defining an API endpoint.
     class ExpectationBuilder
