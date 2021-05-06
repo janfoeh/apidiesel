@@ -6,20 +6,37 @@ module Apidiesel
   class Endpoint
     extend Dsl
 
+    attr_accessor :api
+    attr_reader :config
+
     # accessors for class instance variables
     # (class-level variables, not shared with subclasses)
     class << self
       include Handlers
 
-      attr_reader :url_value, :url_args
       attr_accessor :label
 
-      # We're passing along our configuration data contained in class instance vars
-      # to our subclasses. These are the variables we need to enumerate to do that.
-      INHERITABLE_CLASS_INSTANCE_VARS = [
-        :parameter_validations, :parameters_to_filter, :response_filters, :response_formatters,
-        :parameter_formatter, :endpoint, :url_value, :url_args, :http_method
-      ]
+      def config
+        @config ||=
+          Config.new do
+            url_value             nil
+            url_args              nil
+            http_method           nil
+            http_basic_username   nil
+            http_basic_password   nil
+            parameter_validations []
+            parameters_to_filter  []
+            response_filters      []
+            response_formatters   []
+            parameter_formatter   nil
+          end
+      end
+
+      %i(http_method http_basic_username http_basic_password).each do |config_key|
+        define_method(config_key) do |value|
+          value.present? ? config.set(config_key, value) : config.fetch(config_key)
+        end
+      end
 
       def actions
         @actions ||= []
@@ -29,46 +46,8 @@ module Apidiesel
         actions.find { |action| action.label == label }
       end
 
-      # Array for storing parameter validation procs. These procs are called with the request
-      # parameters before the request is made and have the opportunity to check and modify them.
-      def parameter_validations
-        @parameter_validations ||= []
-      end
-
-      # Array for storing endpoint argument names which are not to be submitted as parameters
-      def parameters_to_filter
-        @parameters_to_filter ||= []
-      end
-
-      # Array for storing filter procs. These procs are called with the received data
-      # after a request is made and have the opportunity to modify or check it before the
-      # data is returned
-      def response_filters
-        @response_filters ||= []
-      end
-
-      def response_formatters
-        @response_formatters ||= []
-      end
-
       def format_parameters(&block)
-        @parameter_formatter = block
-      end
-
-      def parameter_formatter
-        @parameter_formatter
-      end
-
-      # Combined getter/setter for this endpoints' endpoint
-      # TODO rewrite
-      #
-      # @param value [String]
-      def endpoint(value = nil)
-        if value
-          @endpoint = value
-        else
-          @endpoint
-        end
+        config.set(:parameter_formatter, block)
       end
 
       # Defines this Endpoints URL, or modifies the base URL set on `Api`
@@ -140,33 +119,16 @@ module Apidiesel
           raise ArgumentError, "you cannot supply both argument and keyword args"
         end
 
-        @url_value  = value
-        @url_args   = kargs
+        config.set(:url_value, value) if value
+        config.set(:url_args, kargs) if kargs.any?
       end
 
-      # Combined getter/setter for the HTTP method used
-      #
-      # Falls back to the Api setting if blank.
-      #
-      # @param value [String]
-      def http_method(value = nil)
-        if value
-          @http_method = value
-        else
-          @http_method
-        end
-      end
-
-      # When subclassed, we copy our configuration into the subclass
-      def inherited(subclass)
-        INHERITABLE_CLASS_INSTANCE_VARS.map { |var_name| "@#{var_name}" }
-                                       .each do |var_name|
-          subclass.instance_variable_set(var_name, instance_variable_get(var_name).dup)
-        end
+      # When subclassing to create an `action`, we chain our configuration into
+      # the subclasses config
+      def inherited(subklass)
+        subklass.config.parent = config
       end
     end
-
-    attr_accessor :api
 
     # Hook method that is called by {Apidiesel::Api} to register this Endpoint on itself.
     #
@@ -186,8 +148,6 @@ module Apidiesel
       EOT
     end
 
-      private
-
     # Returns current class name formatted for use as a method name
     #
     # Example: {Apidiesel::Endpoints::Foo} will return `foo`
@@ -196,28 +156,16 @@ module Apidiesel
     def self.name_as_method
       ::ActiveSupport::Inflector.underscore( ::ActiveSupport::Inflector.demodulize(self.name) )
     end
-
-      public
+    private_class_method :name_as_method
 
     # @param api [Apidiesel::Api] a reference to the parent Api object
     def initialize(api)
       @api = api
-    end
 
-    # Getter/setter for the parameters to be used for creating the API request. Prefilled
-    # with the `op` endpoint key.
-    #
-    # @return [Hash]
-    def parameters
-      @parameters ||= {}
-    end
+      parent_config        = self.class.config.dup
+      parent_config.parent = api.config
 
-    def endpoint
-      self.class.endpoint
-    end
-
-    def http_method
-      self.class.http_method || @api.http_method || :get
+      @config = Config.new(parent: parent_config)
     end
 
     # Performs the endpoint-specific input validations on `*args` according to the endpoints
@@ -229,14 +177,14 @@ module Apidiesel
     def build_request(**args)
       params = {}
 
-      self.class.parameter_validations.each do |validation|
+      config.parameter_validations.each do |validation|
         validation.call(api, args, params)
       end
 
-      if self.class.parameter_formatter
-        params = self.class.parameter_formatter.call(params)
+      if config.parameter_formatter
+        params = config.parameter_formatter.call(params)
       else
-        params.except!(*self.class.parameters_to_filter)
+        params.except!(*config.parameters_to_filter)
       end
 
       request = Apidiesel::Request.new(endpoint: self, endpoint_arguments: args, parameters: params)
@@ -259,15 +207,15 @@ module Apidiesel
         response_data
       end
 
-      if self.class.response_filters.none? && self.class.response_formatters.none?
+      if config.response_filters.none? && config.response_formatters.none?
         return response_data
       end
 
-      self.class.response_filters.each do |filter|
+      config.response_filters.each do |filter|
         response_data = filter.call(response_data)
       end
 
-      self.class.response_formatters.each do |filter|
+      config.response_formatters.each do |filter|
         processed_result = filter.call(response_data, processed_result)
       end
 
@@ -278,18 +226,19 @@ module Apidiesel
 
     # @return [URI]
     def build_url(endpoint_arguments, request)
-      url = case self.class.url_value
+      url = case config.url_value
       when String
-        URI( self.class.url_value % endpoint_arguments )
+        URI( config.url_value % endpoint_arguments )
       when URI
-        self.class.url_value
+        config.url_value
       when Proc
-        self.class.url_value.call(base_url, request)
+        config.url_value.call(base_url, request)
       when nil
-        base_url
+        binding.pry
+        config.base_url
       end
 
-      url_args = self.class.url_args.transform_values do |value|
+      url_args = config.url_args.transform_values do |value|
         value % endpoint_arguments
       end
 
@@ -312,17 +261,8 @@ module Apidiesel
       url
     end
 
-    def base_url
-      @api.url.nil? ? URI('http://') : @api.url.dup
-    end
-
-    # @return [Hash] Apidiesel configuration options
-    def config
-      Apidiesel::CONFIG[environment]
-    end
-
     def logger
-      @api.logger
+      api.logger
     end
   end
 end

@@ -10,7 +10,31 @@ Coming from the development release 0.15, 1.0.0 contains a number of breaking ch
   becomes `<MyNamespace>::Endpoints`, `Apidiesel::Api.register_actions` becomes `Apidiesel::Api.register_endpoints`
   and so on.
 
-* `Apidiesel::Endpoint` can now be subclassed
+* `Apidiesel::CONFIG` constant has been removed
 
-  Subclasses inherit all configuration of their parent class. One consequence is that you cannot have multiple
-  `expects {}` or `responds_with {}` blocks in one class anymore - each subsequent call overwrites prior configuration.
+* `Apidiesel::Api` DSL changes:
+
+  * `url` has been renamed to `base_url`
+  * `http_basic_auth` has been removed; use `http_basic_username` and `http_basic_password` instead
+  * `config` is now an accessor for a `Apidiesel::Config` instance storing the base class configuration
+
+  Previously:
+
+  ```ruby
+  class MyApi < Apidiesel::Api
+    url "https://www.example.com"
+    config :some_key, "some_value"
+    http_basic_auth "username", "password"
+  end
+  ```
+
+  Now:
+
+  ```ruby
+  class MyApi < Apidiesel::Api
+    base_url "https://www.example.com"
+    config.set :some_key, "some_value"
+    http_basic_username "username"
+    http_basic_password "password"
+  end
+  ```

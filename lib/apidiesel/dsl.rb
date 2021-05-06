@@ -18,8 +18,9 @@ module Apidiesel
     def expects(&block)
       builder = ExpectationBuilder.new
       builder.instance_eval(&block)
-      parameter_validations.replace(builder.parameter_validations)
-      parameters_to_filter.replace(builder.parameters_to_filter)
+
+      config.parameter_validations.replace(builder.parameter_validations)
+      config.parameters_to_filter.replace(builder.parameters_to_filter)
     end
 
     # Defines the expected content and format of the response for this API endpoint.
@@ -39,11 +40,11 @@ module Apidiesel
 
       builder.instance_eval(&block)
 
-      response_filters.replace(builder.response_filters)
-      response_formatters.replace(builder.response_formatters)
+      config.response_filters.replace(builder.response_filters)
+      config.response_formatters.replace(builder.response_formatters)
 
       if args[:unnested_hash]
-        response_formatters << lambda do |_, response|
+        config.response_formatters << lambda do |_, response|
           if response.is_a?(Hash) && response.keys.length == 1
             response.values.first
           else

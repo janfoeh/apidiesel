@@ -10,6 +10,7 @@ require 'apidiesel/version'
 
 require 'apidiesel/errors'
 require 'apidiesel/handlers'
+require 'apidiesel/config'
 require 'apidiesel/api'
 require 'apidiesel/dsl'
 require 'apidiesel/request'

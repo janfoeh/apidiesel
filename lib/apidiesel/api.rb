@@ -33,54 +33,23 @@ module Apidiesel
     class << self
       include Handlers
 
-      def config(key = nil, value = nil)
-        @config ||= {}
-
-        if key && value
-          @config[key] = value
-        else
-          @config
-        end
+      def config
+        @config ||=
+          Config.new do
+            base_url            nil
+            http_method         :get
+            http_basic_username nil
+            http_basic_password nil
+            ssl_verify_mode     :peer
+            request_timeout     30
+            parameters_as       :flat_query_parameters
+          end
       end
 
-      # Combined getter/setter for this endpoints URL
-      #
-      # Falls back to the Api setting if blank.
-      #
-      # @param base_url [String]
-      def url(base_url = nil)
-        if base_url
-          config[:url] = URI.parse(base_url)
-        else
-          config[:url]
-        end
-      end
-
-      # Combined getter/setter for the HTTP method used
-      #
-      # Falls back to the Api setting if blank.
-      #
-      # @param value [String]
-      def http_method(value = nil)
-        if value
-          config[:http_method] = value
-        else
-          config[:http_method]
-        end
-      end
-
-      # Combined getter/setter for the HTTP Basic Auth
-      #
-      # Falls back to the Api setting if blank.
-      #
-      # @param username [String]
-      # @param password [String]
-      def http_basic_auth(username = nil, password = nil)
-        if username && password
-          config[:http_basic_username] = username
-          config[:http_basic_password] = password
-        else
-          return config[:http_basic_username], config[:http_basic_password]
+      %i(base_url http_method http_basic_username http_basic_password
+         ssl_verify_mode timeout parameters_as).each do |config_key|
+        define_method(config_key) do |value|
+          value.present? ? config.set(config_key, value) : config.fetch(config_key)
         end
       end
 
@@ -104,7 +73,7 @@ module Apidiesel
 
     # @param kargs [Hash]
     def initialize(**kargs)
-      @config = kargs.reverse_merge(self.class.config)
+      @config = Config.new(kargs, parent: self.class.config)
     end
 
     def url
