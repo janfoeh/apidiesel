@@ -36,13 +36,14 @@ module Apidiesel
       def config
         @config ||=
           Config.new do
-            base_url            nil
-            http_method         :get
-            http_basic_username nil
-            http_basic_password nil
-            ssl_verify_mode     :peer
-            request_timeout     30
-            parameters_as       :flat_query_parameters
+            base_url                nil
+            http_method             :get
+            http_basic_username     nil
+            http_basic_password     nil
+            ssl_verify_mode         :peer
+            request_timeout         30
+            parameters_as           :auto
+            include_nil_parameters  false
           end
       end
 

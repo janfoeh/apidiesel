@@ -12,9 +12,20 @@ module Apidiesel
       # @param api_config [Hash]  the configuration data of the Apidiesel::Api
       #   instance, as given to the handlers #run method
       #
-      def execute_request(request:, payload:, api_config:)
-        http_request      = HTTPI::Request.new(request.url.try(:to_s))
-        http_request.body = payload
+      def execute_request(request:, api_config:, payload: nil)
+        http_request = HTTPI::Request.new(request.url.try(:to_s))
+
+        if api_config.parameters_as == :query ||
+          (api_config.parameters_as == :auto && api_config.http_method == :get)
+          http_request.query = request.parameters
+        end
+
+        http_request.body =
+          if payload
+            payload
+          elsif request.parameters.any? && api_config.parameters_as == :body
+            request.parameters
+          end
 
         if api_config.http_basic_username && api_config.http_basic_password
           http_request.auth.basic(api_config.http_basic_username, api_config.http_basic_password)

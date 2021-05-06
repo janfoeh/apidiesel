@@ -183,12 +183,13 @@ module Apidiesel
       def validation_builder(duck_typing_check, param_name, **args)
         options = args
 
-        parameter_validations << lambda do |api, given_params, processed_params|
+        parameter_validations << lambda do |api, config, given_params, processed_params|
           given_value = given_params[param_name]
 
           if options[:fetch_from_base] && given_value.nil?
-            if api.config[param_name]
-              given_value = api.config[param_name]
+            if config.fetch(param_name)
+              given_value = config.fetch(param_name)
+
             elsif api.respond_to?(param_name)
               given_value = api.send(param_name)
             end
@@ -207,7 +208,7 @@ module Apidiesel
           end
 
           unless options.has_key?(:optional) && options[:optional] == true
-            raise Apidiesel::InputError, "missing arg: #{param_name} - options: #{options.inspect}" unless given_params.has_key?(param_name) && !given_params[param_name].nil?
+            raise Apidiesel::InputError, "missing arg: #{param_name} - options: #{options.inspect}" if given_value.blank?
 
             if duck_typing_check.is_a?(Proc)
               duck_typing_check.call(given_value, param_name)

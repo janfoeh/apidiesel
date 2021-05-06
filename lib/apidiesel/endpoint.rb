@@ -178,7 +178,7 @@ module Apidiesel
       params = {}
 
       config.parameter_validations.each do |validation|
-        validation.call(api, args, params)
+        validation.call(api, config, args, params)
       end
 
       if config.parameter_formatter
@@ -187,8 +187,12 @@ module Apidiesel
         params.except!(*config.parameters_to_filter)
       end
 
+      unless config.include_nil_parameters
+        params.delete_if { |key, value| value.nil? }
+      end
+
       request = Apidiesel::Request.new(endpoint: self, endpoint_arguments: args, parameters: params)
-      request.url = build_url(args, request)
+      request.url = build_url(params, request)
 
       request
     end
@@ -234,7 +238,6 @@ module Apidiesel
       when Proc
         config.url_value.call(base_url, request)
       when nil
-        binding.pry
         config.base_url
       end
 

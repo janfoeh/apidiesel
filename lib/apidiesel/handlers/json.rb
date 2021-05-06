@@ -7,7 +7,13 @@ module Apidiesel
         include HttpRequestHelper
 
         def run(request, api_config)
-          payload = ::JSON.dump(request.parameters)
+          payload = nil
+
+          if api_config.parameters_as == :body ||
+            (api_config.parameters_as == :auto && api_config.http_method != :get)
+
+            payload = ::JSON.dump(request.parameters)
+          end
 
           request.metadata[:started_at] = DateTime.now
 
