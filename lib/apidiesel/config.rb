@@ -48,6 +48,8 @@ module Apidiesel
     end
 
     def fetch(key)
+      key = key.to_sym
+
       if store[key]
         store[key]
       else
@@ -57,6 +59,7 @@ module Apidiesel
 
     def set(key, value)
       setter_method = "#{key}="
+      key           = key.to_sym
 
       if respond_to?(setter_method)
         send(setter_method, value)
