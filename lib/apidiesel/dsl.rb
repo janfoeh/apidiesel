@@ -240,6 +240,13 @@ module Apidiesel
           else
             processed_params[param_name] = given_value
           end
+
+          # Values marked `submit: false` we write back into the parameters hash
+          # passed in when the endpoint was invoked.
+          # This is primarily used for values needed in URL placeholders.
+          if options[:submit] == false
+            given_params[param_name] = given_value
+          end
         end
       end
     end

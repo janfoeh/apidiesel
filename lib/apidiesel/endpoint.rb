@@ -192,7 +192,7 @@ module Apidiesel
       end
 
       request = Apidiesel::Request.new(endpoint: self, endpoint_arguments: args, parameters: params)
-      request.url = build_url(params, request)
+      request.url = build_url(args, request)
 
       request
     end
