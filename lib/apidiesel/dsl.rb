@@ -92,9 +92,10 @@ module Apidiesel
       #   @option args [Symbol]  :required_if_present param_name is required if param_name is also present
       #   @option args [Symbol]  :submitted_as submit param_name to the API under the name given here
       #   @option args [Object]  :default a default parameter to be set when no value is specified
-      #   @option args [Boolean] :fetch_from_base if not provided by the caller, query the base
+      #   @option args [Boolean, Symbol] :fetch if not provided by the caller, query the base
       #     `Apidiesel::Api` object for it. It will be taken from either `config[<parameter_name>]`, or the return
-      #     value of a method with the same name
+      #     value of a method with the same name. If you pass a Symbol, this will be used as the name to lookup
+      #     instead
       #   @option args [true, false] :submit (true) set to `false` for arguments that should not be submitted
       #                                               as API parameters
       #   @option args [Enumerable] :allowed_values only accept the values in this Enumerable.
@@ -186,12 +187,15 @@ module Apidiesel
         parameter_validations << lambda do |api, config, given_params, processed_params|
           given_value = given_params[param_name]
 
-          if options[:fetch_from_base] && given_value.nil?
-            if config.fetch(param_name)
-              given_value = config.fetch(param_name)
+          if options[:fetch] && given_value.nil?
+            lookup_name =
+              options[:fetch].is_a?(Symbol) ? options[:fetch] : param_name
 
-            elsif api.respond_to?(param_name)
-              given_value = api.send(param_name)
+            if config.fetch(lookup_name)
+              given_value = config.fetch(lookup_name)
+
+            elsif api.respond_to?(lookup_name)
+              given_value = api.send(lookup_name)
             end
           end
 
