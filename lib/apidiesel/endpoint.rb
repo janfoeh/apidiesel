@@ -131,24 +131,6 @@ module Apidiesel
       end
     end
 
-    # Hook method that is called by {Apidiesel::Api} to register this Endpoint on itself.
-    #
-    # Example: when {Apidiesel::Api} calls this method inherited on `Apidiesel::Endpoints::Foo`,
-    # it itself gains a `Apidiesel::Api#foo` instance method to instantiate and call the Foo endpoint.
-    #
-    # Executed in {Apidiesel::Api} through
-    #
-    #   Apidiesel::Endpoints.constants.each do |endpoint|
-    #     Apidiesel::Endpoints.const_get(endpoint).register(self)
-    #   end
-    def self.register(caller)
-      caller.class_eval <<-EOT
-        def #{name_as_method}(*args, action: nil, **kargs)
-          execute_request(#{name}, *args, action: action, **kargs)
-        end
-      EOT
-    end
-
     # Returns current class name formatted for use as a method name
     #
     # Example: {Apidiesel::Endpoints::Foo} will return `foo`

@@ -29,6 +29,8 @@ module Apidiesel
   class Api
     # @return [Hash{Symbol=>Object}]
     attr_reader :config
+    # @return [Apidiesel::Proxies::EndpointNamespace]
+    attr_reader :namespace_proxy
 
     module MockLogger
       class << self
@@ -67,20 +69,13 @@ module Apidiesel
           value.present? ? config.set(config_key, value) : config.fetch(config_key)
         end
       end
-
-      # Registers the individual API endpoint definitions
-      def register_endpoints
-        namespace = "#{self.name.deconstantize}::Endpoints".safe_constantize
-
-        namespace.constants.each do |endpoint|
-          namespace.const_get(endpoint).register(self)
-        end
-      end
     end
 
     # @param kargs [Hash]
     def initialize(**kargs)
       @config = Config.new(kargs, parent: self.class.config)
+      @namespace_proxy =
+        Proxies::EndpointNamespace.new(api: self, namespace: config.endpoint_namespace)
     end
 
     def url
@@ -99,7 +94,17 @@ module Apidiesel
       self.class.logger
     end
 
-      protected
+    def method_missing(method_name, *args, **kargs, &block)
+      if namespace_proxy.respond_to?(method_name)
+        namespace_proxy.send(method_name, *args, **kargs, &block)
+      else
+        super
+      end
+    end
+
+    def respond_to_missing?(method_name, *args)
+      namespace_proxy.respond_to?(method_name)
+    end
 
     def execute_request(endpoint_klass, *args, action: nil, **kargs)
       request =

@@ -14,6 +14,7 @@ Coming from the development release 0.15, 1.0.0 contains a number of breaking ch
 
 * `Apidiesel::Api` DSL changes:
 
+  * `register_endpoints` has been removed
   * `url` has been renamed to `base_url`
   * `http_basic_auth` has been removed; use `http_basic_username` and `http_basic_password` instead
   * `config` is now an accessor for a `Apidiesel::Config` instance storing the base class configuration
@@ -37,4 +38,92 @@ Coming from the development release 0.15, 1.0.0 contains a number of breaking ch
     http_basic_username "username"
     http_basic_password "password"
   end
+  ```
+
+* Endpoints are invoked differently
+
+  Previously, you invoked endpoints by calling their underscored name on your `Api` instance:
+
+  ```ruby
+  # old invocation
+  api = MyApi.new
+  api.my_endpoint(id: 5, username: "foo")
+  ```
+
+  Now, this returns a proxy on which you call the endpoints HTTP method:
+
+  ```ruby
+  # new invocation
+  api = MyApi.new
+  api.my_endpoint.post(id: 5, username: "foo")
+  ```
+
+* Dynamic endpoint lookup; removal of `register_endpoints`
+
+  You no longer have to call `register_endpoints`; endpoints are looked up dynamically at runtime.
+
+* Endpoint namespacing
+
+  Endpoints can now be namespaced in modules:
+
+  ```ruby
+  module Endpoints
+    class Pictures < Apidiesel::Endpoint
+    end
+
+    module User
+      class Pictures < Apidiesel::Endpoint
+      end
+    end
+  end
+
+  api = MyApi.new
+
+  api.pictures.get(limit: 10)
+  api.user.pictures.get(limit: 10)
+  ```
+
+* Multiple actions per Endpoint
+
+  An endpoint can now contain multiple different actions, for example to support multiple HTTP verbs
+  for a single URL:
+
+  ```ruby
+  module Endpoints
+    class Users < Apidiesel::Endpoint
+      url path: "/users"
+
+      action(:list) do
+        http_method :get
+
+        expects do
+          integer :limit
+        end
+      end
+
+      action(:get) do
+        url path: "/users/%{id}"
+        http_method :get
+
+        expects do
+          integer :id, submit: false
+        end
+      end
+
+      action(:post) do
+        http_method :post
+
+        expects do
+          string :firstname
+          string :lastname
+        end
+      end
+    end
+  end
+
+  api = MyApi.new
+
+  api.users.list(limit: 20)
+  api.users.get(id: 5)
+  api.users.post(firstname: "Foo", lastname: "Bar")
   ```
