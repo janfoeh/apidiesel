@@ -42,8 +42,12 @@ module Apidiesel
       include Handlers
 
       def config
-        @config ||=
+        @config ||= begin
+          default_namespace =
+            "#{self.name.deconstantize}::Endpoints".safe_constantize
+
           Config.new do
+            endpoint_namespace      default_namespace
             base_url                nil
             http_method             :get
             http_basic_username     nil
@@ -54,9 +58,10 @@ module Apidiesel
             include_nil_parameters  false
             logger                  MockLogger
           end
+        end
       end
 
-      %i(base_url http_method http_basic_username
+      %i(endpoint_namespace base_url http_method http_basic_username
          http_basic_password ssl_verify_mode timeout parameters_as logger).each do |config_key|
         define_method(config_key) do |value|
           value.present? ? config.set(config_key, value) : config.fetch(config_key)
