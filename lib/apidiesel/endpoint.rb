@@ -29,10 +29,11 @@ module Apidiesel
             response_filters      []
             response_formatters   []
             parameter_formatter   nil
+            parameters_as         :auto
           end
       end
 
-      %i(http_method http_basic_username http_basic_password).each do |config_key|
+      %i(http_method http_basic_username http_basic_password parameters_as).each do |config_key|
         define_method(config_key) do |value|
           value.present? ? config.set(config_key, value) : config.fetch(config_key)
         end
