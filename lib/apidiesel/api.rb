@@ -63,7 +63,7 @@ module Apidiesel
 
       %i(endpoint_namespace base_url http_method http_basic_username
          http_basic_password ssl_verify_mode timeout parameters_as logger).each do |config_key|
-        define_method(config_key) do |value|
+        define_method(config_key) do |value = nil|
           value.present? ? config.set(config_key, value) : config.fetch(config_key)
         end
       end

@@ -34,7 +34,7 @@ module Apidiesel
       end
 
       %i(http_method http_basic_username http_basic_password parameters_as).each do |config_key|
-        define_method(config_key) do |value|
+        define_method(config_key) do |value = nil|
           value.present? ? config.set(config_key, value) : config.fetch(config_key)
         end
       end
