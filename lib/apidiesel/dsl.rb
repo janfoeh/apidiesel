@@ -102,13 +102,33 @@ module Apidiesel
       #                               If Enumerable is a Hash, use the hash values to define what is actually
       #                               sent to the server. Example: `:allowed_values => {:foo => "f"}` allows
       #                               the value ':foo', but sends it as 'f'
+      #   @option args [Symbol, Proc] :typecast A method name or Proc for typecasting the given value into
+      #                               the form it will be submitted in
       #   @return [nil]
       def string(param_name, **args)
         validation_builder(:to_s, param_name, **args)
         parameters_to_filter << param_name if args[:submit] == false
       end
 
+      # Defines a symbol parameter
+      #
+      # This is primarily used in places where symbols are more convenient for the API user;
+      # the value itself will be transmitted as a String.
+      #
+      # @example
+      #   expects do
+      #     symbol :status, allowed_values: %i(pending open closed)
+      #   end
+      #
+      # @!macro expectation_types
+      def symbol(param_name, **args)
+        validation_builder(:to_s, param_name, **args)
+        parameters_to_filter << param_name if args[:submit] == false
+      end
+
       # Defines an integer parameter.
+      #
+      # By default, `#to_i` is called on the input value; set `:typecast` to override.
       #
       # @example
       #   expects do
@@ -132,7 +152,9 @@ module Apidiesel
       #
       # @!macro expectation_types
       def boolean(param_name, **args)
-        validation_builder(:to_s, param_name, **args)
+        args[:typecast] = nil
+
+        validation_builder(nil, param_name, **args)
         parameters_to_filter << param_name if args[:submit] == false
       end
 
@@ -151,6 +173,8 @@ module Apidiesel
           args[:processor] = ->(value) { value.try(:strftime, args[:format]) }
         end
 
+        args[:typecast] = nil
+
         validation_builder(:strftime, param_name, **args)
         parameters_to_filter << param_name if args[:submit] == false
       end
@@ -160,6 +184,7 @@ module Apidiesel
 
       # Defines an object parameter
       #
+      # By default, `#to_hash` is called on the input value; set `:typecast` to override.
       #
       # @example
       #   expects do
@@ -169,6 +194,8 @@ module Apidiesel
       # @!macro expectation_types
       # @option args [Class] :klass the expected class of the value
       def object(param_name, **args)
+        args[:typecast] = args[:typecast] || :to_hash
+
         type_check = ->(value, param_name) {
           unless value.is_a?(args[:klass])
             raise Apidiesel::InputError, "arg #{param_name} must be a #{args[:klass].name}"
@@ -181,7 +208,7 @@ module Apidiesel
 
         protected
 
-      def validation_builder(duck_typing_check, param_name, **args)
+      def validation_builder(duck_typing_check, param_name, typecast: duck_typing_check, **args)
         options = args
 
         parameter_validations << lambda do |api, config, given_params, processed_params|
@@ -216,10 +243,21 @@ module Apidiesel
 
             if duck_typing_check.is_a?(Proc)
               duck_typing_check.call(given_value, param_name)
-            else
+            elsif !duck_typing_check.nil?
               raise Apidiesel::InputError, "invalid arg #{param_name}: must respond to #{duck_typing_check}" unless given_value.respond_to?(duck_typing_check)
             end
           end
+
+          if options[:typecast] && given_value
+            given_value =
+              case options[:typecast]
+              when Symbol
+                given_value.send(options[:typecast])
+              when Proc
+                options[:typecast].call(given_values)
+              end
+          end
+
 
           if options.has_key?(:allowed_values) && !given_value.blank?
             unless options[:allowed_values].include?(given_value)
