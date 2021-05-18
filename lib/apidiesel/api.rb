@@ -30,6 +30,14 @@ module Apidiesel
     # @return [Hash{Symbol=>Object}]
     attr_reader :config
 
+    module MockLogger
+      class << self
+        [:fatal, :error, :warn, :info, :notice].each do |level|
+          define_method(level) { |*_args, **_kargs| }
+        end
+      end
+    end
+
     class << self
       include Handlers
 
@@ -44,11 +52,12 @@ module Apidiesel
             request_timeout         30
             parameters_as           :auto
             include_nil_parameters  false
+            logger                  MockLogger
           end
       end
 
-      %i(base_url http_method http_basic_username http_basic_password
-         ssl_verify_mode timeout parameters_as).each do |config_key|
+      %i(base_url http_method http_basic_username
+         http_basic_password ssl_verify_mode timeout parameters_as logger).each do |config_key|
         define_method(config_key) do |value|
           value.present? ? config.set(config_key, value) : config.fetch(config_key)
         end
@@ -60,14 +69,6 @@ module Apidiesel
 
         namespace.constants.each do |endpoint|
           namespace.const_get(endpoint).register(self)
-        end
-      end
-
-      def logger(logger = nil)
-        if logger
-          @logger = logger
-        else
-          @logger
         end
       end
     end
