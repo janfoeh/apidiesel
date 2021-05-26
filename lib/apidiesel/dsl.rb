@@ -34,9 +34,13 @@ module Apidiesel
     # for more information on what to use within `responds_with`.
     #
     # @macro [attach] responds_with
+    #   @param attributes_optional  [Boolean] default for all attributes: if true, no exception
+    #     is raised if an attribute is not present in the response
+    #   @param attributes_allow_nil [Boolean] default for all attributes: if true, no exception
+    #     will be raised if an attributes value is not of the defined type, but nil
     #   @yield [Apidiesel::Dsl::FilterBuilder]
-    def responds_with(**args, &block)
-      builder = FilterBuilder.new
+    def responds_with(attributes_optional: false, attributes_allow_nil: true, **args, &block)
+      builder = FilterBuilder.new(optional: attributes_optional, allow_nil: attributes_allow_nil)
 
       builder.instance_eval(&block)
 
@@ -293,12 +297,17 @@ module Apidiesel
     # when defining an API endpoint.
     class FilterBuilder
       # @!visibility private
-      attr_accessor :response_filters, :response_formatters
+      attr_accessor :response_filters, :response_formatters, :global_options
 
+      # @param optional [Boolean] default for all attributes: if true, no exception
+      #   is raised if an attribute is not present in the response
+      # @param allow_nil [Boolean] default for all attributes: if true, no exception
+      #   will be raised if an attributes value is not of the defined type, but nil
       # @!visibility private
-      def initialize
+      def initialize(optional: false, allow_nil: true)
         @response_filters    = []
         @response_formatters = []
+        @global_options      = { optional: optional, allow_nil: allow_nil }
       end
 
       # @!macro [new] filter_types
@@ -312,6 +321,10 @@ module Apidiesel
       #     @option kargs [Proc] :postfilter callback for modifying the value after typecasting
       #     @option kargs [Proc] :filter alias for :postfilter
       #     @option kargs [Hash] :map a hash map for replacing the value
+      #     @option kargs [Boolean] :optional if true, no exception is raised if `key` is not
+      #       present in the response
+      #     @option kargs [Boolean] :allow_nil if true, no exception is raised if the `key` is
+      #       present in the response, but `nil`
       #
       #   @overload $0(at:, as:, **kargs)
       #     Get the $0 named `at:` from the response hash and name it `as:` in the result hash
@@ -322,13 +335,20 @@ module Apidiesel
       #     @option kargs [Proc] :postfilter callback for modifying the value after typecasting
       #     @option kargs [Proc] :filter alias for :postfilter
       #     @option kargs [Hash] :map a hash map for replacing the value
+      #     @option kargs [Boolean] :optional if true, no exception is raised if `key` is not
+      #       present in the response
+      #     @option kargs [Boolean] :allow_nil if true, no exception is raised if the `key` is
+      #       present in the response, but `nil`
       #
       #   @return [nil]
       def value(*args, **kargs)
         args = normalize_arguments(args, kargs)
 
         response_formatters << lambda do |data, processed_data|
-          value = get_value(data, args[:at])
+          value =
+            get_value(data, args[:at], optional: args[:optional], allow_nil: args[:allow_nil])
+
+          return processed_data unless has_key_path?(data, args[:at])
 
           value = apply_filter(args[:prefilter], value)
 
@@ -358,7 +378,10 @@ module Apidiesel
         args[:falsy]  = Array(args[:falsy]).map(&:to_s)
 
         response_formatters << lambda do |data, processed_data|
-          value = get_value(data, args[:at])
+          value =
+            get_value(data, args[:at], optional: args[:optional], allow_nil: args[:allow_nil])
+
+          return processed_data unless has_key_path?(data, args[:at])
 
           value = apply_filter(args[:prefilter], value)
 
@@ -406,7 +429,10 @@ module Apidiesel
         args.reverse_merge!(format: '%Y-%m-%d')
 
         response_formatters << lambda do |data, processed_data|
-          value = get_value(data, args[:at])
+          value =
+            get_value(data, args[:at], optional: args[:optional], allow_nil: args[:allow_nil])
+
+          return processed_data unless has_key_path?(data, args[:at])
 
           value = apply_filter(args[:prefilter], value)
 
@@ -430,7 +456,10 @@ module Apidiesel
         args.reverse_merge!(format: '%Y-%m-%d')
 
         response_formatters << lambda do |data, processed_data|
-          value = get_value(data, args[:at])
+          value =
+            get_value(data, args[:at], optional: args[:optional], allow_nil: args[:allow_nil])
+
+          return processed_data unless has_key_path?(data, args[:at])
 
           value = apply_filter(args[:prefilter], value)
 
@@ -454,7 +483,10 @@ module Apidiesel
         args.reverse_merge!(format: '%Y-%m-%d')
 
         response_formatters << lambda do |data, processed_data|
-          value = get_value(data, args[:at])
+          value =
+            get_value(data, args[:at], optional: args[:optional], allow_nil: args[:allow_nil])
+
+          return processed_data unless has_key_path?(data, args[:at])
 
           value = apply_filter(args[:prefilter], value)
 
@@ -525,14 +557,24 @@ module Apidiesel
         args = normalize_arguments(args, kargs)
 
         response_formatters << lambda do |data, processed_data|
-          data = get_value(data, args[:at]) if args[:at]
+          if args[:at]
+            data =
+              get_value(data, args[:at], optional: args[:optional], allow_nil: args[:allow_nil])
 
-          return processed_data unless data.present?
+            return processed_data unless has_key_path?(data, args[:at])
+          end
 
-          data = [data] if data.is_a?(Hash)
+          data = apply_filter(args[:prefilter], data)
+
+          if data.nil?
+            processed_data[ args[:as] ] = nil
+            return processed_data
+          end
 
           array_of_hashes = data.map do |hash|
-            builder = FilterBuilder.new
+            builder =
+              FilterBuilder.new(optional: global_options[:optional], allow_nil: global_options[:allow_nil])
+
             builder.instance_eval(&block)
 
             result = {}
@@ -572,19 +614,27 @@ module Apidiesel
         args = normalize_arguments(args, kargs)
 
         response_formatters << lambda do |data, processed_data|
-          data = get_value(data, args[:at])
+          data =
+            get_value(data, args[:at], optional: args[:optional], allow_nil: args[:allow_nil])
 
-          return processed_data unless data.is_a?(Hash)
+          return processed_data unless has_key_path?(data, args[:at])
 
-          hash = apply_filter(args[:prefilter], data)
+          data = apply_filter(args[:prefilter], data)
+
+          if data.nil?
+            processed_data[ args[:as] ] = nil
+            return processed_data
+          end
 
           result = {}
 
-          builder = FilterBuilder.new
+          builder =
+            FilterBuilder.new(optional: global_options[:optional], allow_nil: global_options[:allow_nil])
+
           builder.instance_eval(&block)
 
           builder.response_formatters.each do |filter|
-            result = filter.call(hash, result)
+            result = filter.call(data, result)
           end
 
           result = apply_filter(args[:postfilter_each] || args[:filter_each], result)
@@ -617,7 +667,10 @@ module Apidiesel
         args = normalize_arguments(args, kargs)
 
         response_formatters << lambda do |data, processed_data|
-          value = get_value(data, args[:at])
+          value =
+            get_value(data, args[:at], optional: args[:optional], allow_nil: args[:allow_nil])
+
+          return processed_data unless has_key_path?(data, args[:at])
 
           value = apply_filter(args[:prefilter], value)
 
@@ -676,15 +729,18 @@ module Apidiesel
         args = normalize_arguments(args, kargs)
 
         response_formatters << lambda do |data, processed_data|
-          value = get_value(data, args[:at])
+          value =
+            get_value(data, args[:at], optional: args[:optional], allow_nil: args[:allow_nil])
+
+          return processed_data unless has_key_path?(data, args[:at])
 
           value = apply_filter(args[:prefilter], value)
 
-          value = value.try(cast_method_symbol)
+          value = value.try(cast_method_symbol) unless value.nil?
 
           value = apply_filter(args[:postfilter] || args[:filter], value)
 
-          value = args[:map][value] if args[:map]
+          value = args[:map][value] if args[:map] && !value.nil?
 
           processed_data[ args[:as] ] = value
 
@@ -698,6 +754,9 @@ module Apidiesel
           kargs[:at] ||= args.first
         end
 
+        kargs =
+          kargs.reverse_merge(global_options)
+
         kargs
       end
 
@@ -707,22 +766,54 @@ module Apidiesel
         filter.call(value)
       end
 
-      def get_value(hash, *keys)
+      # @param optional [Boolean] if false, raise an exception on missing keys
+      # @param allow_nil [Boolean] if false, raise an exception on nil values
+      def get_value(hash, *keys, optional:, allow_nil:)
         keys = keys.first if keys.first.is_a?(Array)
 
-        if keys.length > 1
-          fetch_path(hash, keys)
-        else
-          hash[keys.first]
+        value =
+          if keys.length > 1
+            fetch_path(hash, keys, optional: optional)
+          else
+            raise MalformedResponseError, "Missing key '#{keys.first}'" if !hash.has_key?(keys.first) && !optional
+            hash[keys.first]
+          end
+
+        if value.nil? && !allow_nil
+          raise MalformedResponseError, "Key '#{key}' has an unexpected nil value"
         end
+
+        value
       end
 
-      def fetch_path(hash, key_or_keys)
+      # @param optional [Boolean] if false, raise an exception on missing keys
+      def fetch_path(hash, key_or_keys, optional:)
         Array(key_or_keys).reduce(hash) do |memo, key|
-          memo[key] if memo
+          if memo
+            raise MalformedResponseError, "Missing key '#{key}'" if !memo.has_key?(key) && !optional
+            memo[key]
+          end
         end
       end
 
+      def has_key_path?(hash, key_or_keys)
+        keys = [*key_or_keys]
+
+        return unless hash.is_a?(Hash)
+        return hash.has_key?(keys.first) if keys.one?
+
+        results = []
+
+        keys.reduce(hash) do |memo, key|
+          next unless memo
+
+          results << memo.has_key?(key)
+
+          memo[key]
+        end
+
+        results.all?
+      end
     end
 
   end

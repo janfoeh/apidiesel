@@ -127,3 +127,20 @@ Coming from the development release 0.15, 1.0.0 contains a number of breaking ch
   api.users.get(id: 5)
   api.users.post(firstname: "Foo", lastname: "Bar")
   ```
+
+* `responds_with { array :some_key {} }` when `:some_key` is a `Hash`
+
+  Previously, `array :some_key` would work even if the value of `:some_key` was a `Hash`; it would automatically
+  wrap the hash in an array. This has changed.
+
+  If you require the old behaviour, use a `:prefilter`:
+
+  ```ruby
+  responds_with do
+    array(:some_key
+          prefilter: ->(value) { value.is_a?(Hash) ? [value] : value }) do
+      string :foo
+      integer :bar
+    end
+  end
+  ```

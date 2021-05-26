@@ -14,4 +14,5 @@ module Apidiesel
   end
 
   class ResponseError < RequestError; end
+  class MalformedResponseError < RequestError; end
 end
