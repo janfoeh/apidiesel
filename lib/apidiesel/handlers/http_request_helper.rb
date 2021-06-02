@@ -20,6 +20,12 @@ module Apidiesel
           http_request.query = request.parameters
         end
 
+        if api_config.headers.present?
+          http_request.headers =
+            http_request.headers
+                        .merge(api_config.headers)
+        end
+
         http_request.body =
           if payload
             payload

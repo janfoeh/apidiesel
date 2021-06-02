@@ -54,6 +54,8 @@ module Apidiesel
             http_method             :get
             http_basic_username     nil
             http_basic_password     nil
+            content_type            nil
+            headers                 {}
             ssl_verify_mode         :peer
             request_timeout         30
             parameters_as           :auto
@@ -63,8 +65,8 @@ module Apidiesel
         end
       end
 
-      %i(endpoint_namespace base_url http_method http_basic_username
-         http_basic_password ssl_verify_mode timeout parameters_as logger).each do |config_key|
+      %i(endpoint_namespace base_url http_method http_basic_username http_basic_password
+         content_type headers ssl_verify_mode timeout parameters_as logger).each do |config_key|
         define_method(config_key) do |value = nil|
           value.present? ? config.set(config_key, value) : config.fetch(config_key)
         end

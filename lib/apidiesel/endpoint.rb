@@ -24,6 +24,8 @@ module Apidiesel
             http_method           nil
             http_basic_username   nil
             http_basic_password   nil
+            content_type          nil
+            headers               {}
             parameter_validations []
             parameters_to_filter  []
             response_filters      []
@@ -33,7 +35,7 @@ module Apidiesel
           end
       end
 
-      %i(http_method http_basic_username http_basic_password parameters_as).each do |config_key|
+      %i(http_method http_basic_username http_basic_password content_type headers parameters_as).each do |config_key|
         define_method(config_key) do |value = nil|
           value.present? ? config.set(config_key, value) : config.fetch(config_key)
         end
