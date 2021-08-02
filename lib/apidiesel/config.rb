@@ -9,17 +9,8 @@ module Apidiesel
         @store = {}
       end
 
-      def method_missing(method_name, value = nil, **kargs, &block)
-        store[method_name.to_sym] =
-          if value
-            value
-          elsif kargs.any?
-            kargs
-          elsif block
-            block
-          else
-            nil
-          end
+      def method_missing(method_name, value = nil, **kargs)
+        store[method_name.to_sym] = value || kargs[:value]
       end
 
       def respond_to_missing?(method_name, *args)

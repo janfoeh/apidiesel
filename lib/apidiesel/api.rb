@@ -55,7 +55,7 @@ module Apidiesel
             http_basic_username     nil
             http_basic_password     nil
             content_type            nil
-            headers                 {}
+            headers                 value: {}
             ssl_verify_mode         :peer
             request_timeout         30
             parameters_as           :auto
