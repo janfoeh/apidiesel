@@ -158,10 +158,12 @@ module Apidiesel
     def initialize(api)
       @api = api
 
-      parent_config        = self.class.config.dup
-      parent_config.parent = api.config
+      klass_config =
+        self.class.config.dup
 
-      @config = Config.new(parent: parent_config)
+      klass_config.root.parent =
+        api.config
+
     end
 
     # Performs the endpoint-specific input validations on `*args` according to the endpoints
