@@ -19,11 +19,13 @@ module Apidiesel
     end
 
     attr_reader :store
+    attr_accessor :label
     attr_accessor :parent
 
-    def initialize(config = {}, parent: nil, &block)
-      @store         = config
-      @parent        = parent
+    def initialize(config = {}, parent: nil, label: nil, &block)
+      @label  = label
+      @store  = config
+      @parent = parent
 
       if block_given?
         setter = Setter.new

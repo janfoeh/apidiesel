@@ -48,7 +48,7 @@ module Apidiesel
           default_namespace =
             "#{self.name.deconstantize}::Endpoints".safe_constantize
 
-          Config.new do
+          Config.new(label: name) do
             endpoint_namespace      default_namespace
             base_url                nil
             http_method             :get
@@ -76,7 +76,7 @@ module Apidiesel
     # @param kargs [Hash]
     def initialize(**kargs)
       @config =
-        Config.new(kargs, parent: self.class.config.dup)
+        Config.new(kargs, parent: self.class.config.dup, label: "Instance of #{self.class.name}")
       @namespace_proxy =
         Proxies::EndpointNamespace.new(api: self, namespace: config.endpoint_namespace)
     end

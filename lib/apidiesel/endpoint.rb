@@ -14,13 +14,24 @@ module Apidiesel
     class << self
       include Handlers
 
-      attr_accessor :label
+      attr_reader :label
+
+      # Because a subclasses configuration is initialized
+      # _before_ the label is set, we need to update the
+      # configuration label manually at that time.
+      #
+      # @param [Symbol, String]
+      # @return [void]
+      def label=(value)
+        @label       = value
+        config.label = "#{descriptive_name} (#{value})"
+      end
 
       def config
         @config ||= begin
           response_detector = default_response_detector
 
-          Config.new do
+          Config.new(label: descriptive_name) do
             url_value             nil
             url_args              nil
             http_method           nil
@@ -208,6 +219,8 @@ module Apidiesel
       klass_config.root.parent =
         api.config
 
+      @config =
+        Config.new(parent: klass_config, label: "Instance of #{self.class.descriptive_name}")
     end
 
     # Performs the endpoint-specific input validations on `*args` according to the endpoints
