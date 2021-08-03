@@ -34,8 +34,12 @@ module Apidiesel
 
     module MockLogger
       class << self
-        [:fatal, :error, :warn, :info, :notice].each do |level|
+        [:fatal, :error, :warn, :info, :notice, :debug].each do |level|
           define_method(level) { |*_args, **_kargs| }
+        end
+
+        def tagged(*_args)
+          yield
         end
       end
     end
@@ -124,27 +128,31 @@ module Apidiesel
       response_handlers =
         endpoint_klass.response_handlers.any? ? endpoint_klass.response_handlers : self.class.response_handlers
 
-      request_handlers.each do |handler|
-        request = handler.run(request, @config)
-        break if request.response_body != nil
-      end
+      logger.tagged(endpoint_klass.name, request.id) do
+        request_handlers.each do |handler|
+          request = handler.run(request, @config)
+          break if request.response_body != nil
+        end
 
-      unless request.response_body != nil
-        raise "All request handlers failed to deliver a response"
-      end
+        unless request.response_body != nil
+          raise "All request handlers failed to deliver a response"
+        end
 
-      response_handlers.each do |handler|
-        request = handler.run(request, @config)
-      end
+        response_handlers.each do |handler|
+          request = handler.run(request, @config)
+        end
 
-      response_handler_klasses =
-        response_handlers.collect { |handler| handler.class.name.split('::')[-2] }
+        response_handler_klasses =
+          response_handlers.collect { |handler| handler.class.name.split('::')[-2] }
 
-      # Execute the endpoints' `responds_with` block automatically, unless
-      # the handler has been included manually in order to control the
-      # order in which the handlers are run
-      unless response_handler_klasses.include?('ResponseProcessor')
-        request.process_response
+        # Execute the endpoints' `responds_with` block automatically, unless
+        # the handler has been included manually in order to control the
+        # order in which the handlers are run
+        unless response_handler_klasses.include?('ResponseProcessor')
+          request.process_response
+        end
+
+        logger.debug "parsed response result: #{request.result.inspect}"
       end
 
       request

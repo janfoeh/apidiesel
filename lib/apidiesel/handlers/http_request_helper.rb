@@ -47,10 +47,14 @@ module Apidiesel
 
         request.http_request = http_request
 
+        api_config.logger.debug "Sending HTTP request: #{http_request.inspect}"
+
         begin
           response = HTTPI.request(api_config.http_method, http_request)
           request.http_response = response
+          api_config.logger.debug "Received HTTP response: #{response.inspect}"
         rescue => e
+          api_config.logger.error "HTTP request failed: #{e}"
           raise RequestError.new(e, request)
         end
 
