@@ -50,7 +50,7 @@ module Apidiesel
         api_config.logger.debug "Sending HTTP request: #{http_request.inspect}"
 
         begin
-          response = HTTPI.request(api_config.http_method, http_request)
+          response = HTTPI.request(request.endpoint.config.http_method, http_request)
           request.http_response = response
           api_config.logger.debug "Received HTTP response: #{response.inspect}"
         rescue => e
