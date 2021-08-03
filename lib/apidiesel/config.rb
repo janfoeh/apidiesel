@@ -36,12 +36,18 @@ module Apidiesel
       end
     end
 
-    def configured?(key)
-      store.has_key?(key) || parent.try(:configured?, key)
+    def configured?(key, only_self: false)
+      if store.has_key?(key)
+        return true
+      else
+        return false if only_self
+      end
+
+      parent.try(:configured?, key)
     end
 
-    def present?(key)
-      configured?(key) && fetch(key).present?
+    def present?(key, only_self: false)
+      configured?(key, only_self: only_self) && fetch(key, only_self: only_self).present?
     end
 
     def root
@@ -52,13 +58,13 @@ module Apidiesel
       parent ? parent.parents.prepend(parent) : []
     end
 
-    def fetch(key)
+    def fetch(key, only_self: false)
       key = key.to_sym
 
       if store[key]
         store[key]
       else
-        parent.try(:fetch, key)
+        parent.try(:fetch, key) unless only_self
       end
     end
 
@@ -79,6 +85,31 @@ module Apidiesel
 
     def base_url=(value)
       store[:base_url] = value.present? ? URI.parse(value) : value
+    end
+
+    # Searches for key `key` in hash attribute `attrib` across
+    # the configuration chain
+    #
+    # `search_hash_key` allows you to find a Hash attribute key, even
+    # if the child has overloaded that attribute, but does not have that
+    # key.
+    #
+    # @param attrib               [Symbol] the configuration attribute name
+    # @param key                  [Object] the Hash key
+    # @param skip_existence_check [Boolean] do not check whether the attribute
+    #   exists
+    # @return [Object, nil]
+    def search_hash_key(attrib, key, skip_existence_check: false)
+      raise "Config key #{attrib} not found" unless skip_existence_check || configured?(attrib)
+
+      own_value =
+        fetch(attrib, only_self: true)
+
+      if own_value.is_a?(Hash) && own_value.has_key?(key)
+        return own_value[key]
+      end
+
+      parent ? parent.search_hash_key(attrib, key, skip_existence_check: true) : nil
     end
 
     def method_missing(method_name, *args, **kargs, &block)
