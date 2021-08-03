@@ -38,6 +38,18 @@ module Apidiesel
       store.has_key?(key) || parent.try(:configured?, key)
     end
 
+    def present?(key)
+      configured?(key) && fetch(key).present?
+    end
+
+    def root
+      parent ? parent.root : self
+    end
+
+    def parents
+      parent ? parent.parents.prepend(parent) : []
+    end
+
     def fetch(key)
       key = key.to_sym
 
