@@ -287,7 +287,11 @@ module Apidiesel
       when Proc
         config.url_value.call(base_url, request)
       when nil
-        config.base_url
+        if config.base_url
+          config.base_url
+        else
+          raise Error, "endpoint URL configuration requires a base_url, but none is configured"
+        end
       end
 
       url_args = config.url_args.transform_values do |value|
