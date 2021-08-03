@@ -17,7 +17,9 @@ module Apidiesel
       attr_accessor :label
 
       def config
-        @config ||=
+        @config ||= begin
+          response_detector = default_response_detector
+
           Config.new do
             url_value             nil
             url_args              nil
@@ -30,12 +32,15 @@ module Apidiesel
             parameters_to_filter  []
             response_filters      value: {}
             response_formatters   value: {}
+            response_detector     response_detector
             parameter_formatter   nil
             parameters_as         :auto
           end
+        end
       end
 
-      %i(http_method http_basic_username http_basic_password content_type headers parameters_as).each do |config_key|
+      %i(http_method http_basic_username http_basic_password content_type headers
+         parameters_as response_detector).each do |config_key|
         define_method(config_key) do |value = nil|
           value.present? ? config.set(config_key, value) : config.fetch(config_key)
         end
@@ -144,6 +149,45 @@ module Apidiesel
       end
     end
 
+    # Default mechanism for selecting a response formatter
+    #
+    # You can define multiple `responds_to` blocks to cover different response
+    # scenarios, such as success or failure. The Proc at `config.response_detector`
+    # determines which of those blocks gets to handle a response.
+    #
+    # This is the default mechanism which lets you process responses differently
+    # based on the HTTP status code returned.
+    #
+    # @see {Apidiesel::Dsl#responds_with}
+    # @return [Proc]
+    def self.default_response_detector
+      ->(request:, config:) {
+        status =
+          request.http_response
+                 .code
+                 .to_s
+
+        status_code_label =
+          "http_#{status}".to_sym
+        status_class_label =
+          "http_#{status.first}xx".to_sym
+
+        case
+        when config.response_formatters.has_key?(status_code_label)
+          logger.debug "classified response as #{status_code_label}"
+          status_code_label
+
+        when config.response_formatters.has_key?(status_class_label)
+          logger.debug "classified response as #{status_class_label}"
+          status_class_label
+
+        else
+          logger.debug "classified response as #{status_code_label}, but no formatters available. Using :default"
+          :default
+        end
+      }
+    end
+
     # Returns current class name formatted for use as a method name
     #
     # Example: {Apidiesel::Endpoints::Foo} will return `foo`
@@ -195,33 +239,27 @@ module Apidiesel
       request
     end
 
-    def process_response(response_data)
-      processed_result = {}
+    def process_response(request)
+      body =
+        symbolize_response_body(request.response_body)
 
-      response_data = case response_data
-      when Hash
-        response_data.deep_symbolize_keys
-      when Array
-        response_data.map do |element|
-          element.is_a?(Hash) ? element.deep_symbolize_keys : element
-        end
-      else
-        response_data
+      scenario =
+        instance_exec(request: request, config: config, &config.response_detector)
+
+      filters     = config.response_filters[scenario]
+      formatters  = config.response_formatters[scenario]
+
+      if filters.blank? && formatters.blank?
+        return body
       end
 
-      if config.response_filters.none? && config.response_formatters.none?
-        return response_data
-      end
+      filters.each { |filter| body = filter.call(body) }
 
-      config.response_filters.each do |filter|
-        response_data = filter.call(response_data)
-      end
+      result = {}
 
-      config.response_formatters.each do |filter|
-        processed_result = filter.call(response_data, processed_result)
-      end
+      formatters.each { |filter| result = filter.call(body, result) }
 
-      processed_result
+      result
     end
 
       protected
@@ -260,6 +298,23 @@ module Apidiesel
       end
 
       url
+    end
+
+    # Symbolizes keys on Hash elements of the response body
+    #
+    # @param body [Object]
+    # @return [Object]
+    def symbolize_response_body(body)
+      case body
+      when Hash
+        body.deep_symbolize_keys
+      when Array
+        body.map do |element|
+          element.is_a?(Hash) ? element.deep_symbolize_keys : element
+        end
+      else
+        body
+      end
     end
 
     def logger
