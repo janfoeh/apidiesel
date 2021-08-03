@@ -94,6 +94,7 @@ module Apidiesel
     def dup
       copy = super
       copy.instance_variable_set("@store", store.deep_dup)
+      copy.instance_variable_set("@parent", copy.parent.dup)
       copy
     end
   end
