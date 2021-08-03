@@ -248,7 +248,7 @@ module Apidiesel
         args[:typecast] = args[:typecast] || :to_hash
 
         type_check = ->(value, param_name) {
-          unless value.is_a?(args[:klass])
+          if args[:klass] && !value.is_a?(args[:klass])
             raise Apidiesel::InputError, "arg #{param_name} must be a #{args[:klass].name}"
           end
         }
