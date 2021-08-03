@@ -169,6 +169,8 @@ module Apidiesel
     # This is the default mechanism which lets you process responses differently
     # based on the HTTP status code returned.
     #
+    # Actions and endpoints can inherit scenarios from their parent classes.
+    #
     # @see {Apidiesel::Dsl#responds_with}
     # @return [Proc]
     def self.default_response_detector
@@ -184,11 +186,11 @@ module Apidiesel
           "http_#{status.first}xx".to_sym
 
         case
-        when config.response_formatters.has_key?(status_code_label)
+        when config.search_hash_key(:response_formatters, status_code_label)
           logger.debug "classified response as #{status_code_label}"
           status_code_label
 
-        when config.response_formatters.has_key?(status_class_label)
+        when config.search_hash_key(:response_formatters, status_class_label)
           logger.debug "classified response as #{status_class_label}"
           status_class_label
 
@@ -259,8 +261,8 @@ module Apidiesel
       scenario =
         instance_exec(request: request, config: config, &config.response_detector)
 
-      filters     = config.response_filters[scenario]
-      formatters  = config.response_formatters[scenario]
+      filters     = config.search_hash_key(:response_filters, scenario)
+      formatters  = config.search_hash_key(:response_formatters, scenario)
 
       if filters.blank? && formatters.blank?
         return body
