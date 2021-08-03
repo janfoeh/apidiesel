@@ -32,6 +32,7 @@ module Apidiesel
           response_detector = default_response_detector
 
           Config.new(label: descriptive_name) do
+            library_namespace     nil
             url_value             nil
             url_args              nil
             http_method           nil
@@ -51,7 +52,7 @@ module Apidiesel
       end
 
       %i(http_method http_basic_username http_basic_password content_type headers
-         parameters_as response_detector).each do |config_key|
+         parameters_as response_detector library_namespace).each do |config_key|
         define_method(config_key) do |value = nil|
           value.present? ? config.set(config_key, value) : config.fetch(config_key)
         end

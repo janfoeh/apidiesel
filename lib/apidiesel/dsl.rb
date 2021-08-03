@@ -105,6 +105,88 @@ module Apidiesel
       responds_with(scenario: scenario, **kargs, &block)
     end
 
+    # Import a response block from an `Apidiesel::Library` class called `from:`
+    #
+    # Requires a library namespace to be configured in your `Endpoint` configuration:
+    #
+    # ```ruby
+    # module MyApi
+    #   module Responses
+    #     class Errors < Apidiesel::Library
+    #       response scenario: :http_404 do
+    #         string :error_code
+    #         string :message
+    #       end
+    #     end
+    #   end
+    #
+    #   class MyEndpoint < Apidiesel::Endpoint
+    #     library_namespace MyApi::Responses
+    #
+    #     import_response scenario: :http_404, from: :errors
+    #   end
+    # end
+    # ```
+    #
+    # Each library can contain multiple responses for the same scenario. In this
+    # case, distinguish them by their name:
+    #
+    # ```ruby
+    # module MyApi
+    #   module Responses
+    #     class Errors < Apidiesel::Library
+    #       response scenario: :http_404 do
+    #         string :error_code
+    #         string :message
+    #       end
+    #
+    #       response :special_case, scenario: :http_404 do
+    #         array :failure_reasons
+    #       end
+    #     end
+    #   end
+    #
+    #   class MyEndpoint < Apidiesel::Endpoint
+    #     library_namespace MyApi::Responses
+    #
+    #     import_response scenario: :http_404, from: :errors
+    #
+    #     action(:special_action) do
+    #       import_response :special_case, scenario: :http_404, from: :errors
+    #     end
+    #   end
+    # end
+    # ```
+    #
+    # @param from           [Symbol] the library class name, downcased and underscored
+    #   (eg. with a `library_namespace MyApi::Responses`, `:failure_messages`
+    #   translates to `MyApi::Responses::FailureMessages`)
+    # @param response_name  [Symbol] the optional action name
+    # @param scenario       [Symbol] the optional scenario name
+    # @return [void]
+    def import_response(response_name = :default, from:, scenario: :default)
+      raise "No library namespace defined" unless config.present?(:library_namespace)
+
+      library =
+        "#{config.library_namespace}::#{from.to_s.camelize}".safe_constantize
+
+      raise "Library #{from} not found" unless library
+
+      unless library.formatters.has_key?(response_name)
+        raise "Response #{response_name} not found in library #{from}"
+      end
+
+      [*scenario].each do |scenario_label|
+        config.response_filters[scenario_label]     ||= []
+        config.response_formatters[scenario_label]  ||= []
+
+        config.response_filters[scenario_label]
+              .replace(library.filters[response_name][scenario_label])
+        config.response_formatters[scenario_label]
+              .replace(library.formatters[response_name][scenario_label])
+      end
+    end
+
     def action(label, &block)
       subklass       = Class.new(self, &block)
       subklass.label = label
