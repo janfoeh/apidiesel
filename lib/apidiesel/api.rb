@@ -45,11 +45,11 @@ module Apidiesel
 
       def config
         @config ||= begin
-          default_namespace =
+          default_endpoint_namespace =
             "#{self.name.deconstantize}::Endpoints".safe_constantize
 
           Config.new(label: name) do
-            endpoint_namespace      default_namespace
+            endpoint_namespace      default_endpoint_namespace
             base_url                nil
             http_method             :get
             http_basic_username     nil
