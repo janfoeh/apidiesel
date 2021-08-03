@@ -47,6 +47,12 @@ module Apidiesel
       @metadata           = metadata
     end
 
+    # Random identifier for tracking and logging purposes
+    # @return [String]
+    def id
+      @id ||= SecureRandom.hex
+    end
+
     # The response body after all processing by every involved response handler
     # (eg., a parsed JSON response). Falls back to the raw response body if no
     # processing took place
@@ -64,7 +70,7 @@ module Apidiesel
       # Reraise ResponseErrors to include ourselves. Not
       # pretty, but I can't think of anything nicer right now
       begin
-        @result = endpoint.process_response(response_body)
+        @result = endpoint.process_response(self)
       rescue ResponseError => e
         e.request = self
         raise e
@@ -75,10 +81,34 @@ module Apidiesel
     def to_s
       [
         "Apidiesel::Request",
+        endpoint.class.descriptive_name,
         endpoint.config.http_method.to_s.upcase,
         url.try(:to_s),
         parameters.collect { |key, value| "#{key}: #{value}"}.join(',')
       ].join(' ')
+    end
+
+    def inspect
+      output = to_s
+
+      if http_request
+        output << <<~EOT
+
+          Request:
+            - HEADERS: #{http_request.headers.inspect}
+            - BODY: #{http_request.body.inspect if http_request.body}
+        EOT
+      end
+
+      if http_response
+        output << <<~EOT
+
+          Response:
+            - CODE: #{http_response.code}
+            - HEADERS: #{http_response.headers.inspect}
+            - BODY: #{http_response.body.inspect if http_response.body}
+        EOT
+      end
     end
   end
 end

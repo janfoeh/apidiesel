@@ -49,6 +49,17 @@ module Apidiesel
         actions.find { |action| action.label == label }
       end
 
+      # A meaningful class name
+      #
+      # Since variants are implemented using anonymous subclasses,
+      # they do not have a name. This returns their parent classes
+      # name instead
+      #
+      # @return [String]
+      def descriptive_name
+        label ? ancestors.second.name : name
+      end
+
       def format_parameters(&block)
         config.set(:parameter_formatter, block)
       end
