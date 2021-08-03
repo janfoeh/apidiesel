@@ -75,7 +75,8 @@ module Apidiesel
 
     # @param kargs [Hash]
     def initialize(**kargs)
-      @config = Config.new(kargs, parent: self.class.config)
+      @config =
+        Config.new(kargs, parent: self.class.config.dup)
       @namespace_proxy =
         Proxies::EndpointNamespace.new(api: self, namespace: config.endpoint_namespace)
     end
