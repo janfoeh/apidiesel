@@ -23,6 +23,9 @@ module Apidiesel
     attr_accessor :http_request
     # @return [HTTPI::Response]
     attr_accessor :http_response
+    # @return [StandardError] an as-of-yet unraised exception which occurred
+    #   during the request
+    attr_accessor :request_exception
     # @return [Hash] additional freeform data attached by request and response
     #   handlers, such as timings
     attr_accessor :metadata

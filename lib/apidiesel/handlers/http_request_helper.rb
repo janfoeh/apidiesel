@@ -55,11 +55,7 @@ module Apidiesel
           api_config.logger.debug "Received HTTP response: #{response.inspect}"
         rescue => e
           api_config.logger.error "HTTP request failed: #{e}"
-          raise RequestError.new(e, request)
-        end
-
-        if response.error?
-          raise RequestError.new("#{api_config.http_method} #{request.url} returned #{response.code}", request)
+          request.request_exception = e
         end
 
         request
