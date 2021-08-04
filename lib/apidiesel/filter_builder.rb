@@ -471,7 +471,14 @@ module Apidiesel
     def apply_filter(filter, value)
       return value unless filter
 
-      filter.call(value)
+      case filter
+      when Symbol
+        filter.to_proc.call(value)
+      when Proc
+        filter.call(value)
+      else
+        raise "unsupported filter type #{filter.class.name}"
+      end
     end
 
     # @param optional [Boolean] if false, raise an exception on missing keys
