@@ -266,10 +266,10 @@ module Apidiesel
 
       response_formatters << lambda do |data, processed_data|
         if args[:at]
+          return processed_data unless has_key_path?(data, args[:at])
+
           data =
             get_value(data, args[:at], optional: args[:optional], allow_nil: args[:allow_nil])
-
-          return processed_data unless has_key_path?(data, args[:at])
         end
 
         data = apply_filter(args[:prefilter], data)
