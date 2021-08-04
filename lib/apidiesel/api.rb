@@ -131,7 +131,7 @@ module Apidiesel
       logger.tagged(endpoint_klass.name, request.id) do
         request_handlers.each do |handler|
           request = handler.run(request)
-          break if request.response_body != nil
+          break if request.executed?
         end
 
         unless request.response_body != nil
