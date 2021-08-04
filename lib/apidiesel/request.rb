@@ -65,6 +65,38 @@ module Apidiesel
       @response_body || http_response.try(:body)
     end
 
+    # Has this request been executed already?
+    #
+    # @return [Boolean]
+    def executed?
+      success? || failure?
+    end
+
+    # Has this request been executed successfully?
+    #
+    # @return [Boolean]
+    def success?
+      return false if request_exception
+      # The response body might also arrive via different means, eg.
+      # from mock responses
+      return true if @response_body.present? && http_response.blank?
+
+      http_response && !http_response.error?
+    end
+
+    # Has this request been executed and either failed,
+    # or produced a failure response?
+    #
+    # @return [Boolean]
+    def failure?
+      return true if request_exception
+      # The response body might also arrive via different means, eg.
+      # from mock responses
+      return false if @response_body.present? && http_response.blank?
+
+      http_response && http_response.error?
+    end
+
     # Executes the endpoints `responds_with {}` block to create the final `#result`
     #
     # @raise [Apidiesel::ResponseError]
