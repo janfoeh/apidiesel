@@ -2,31 +2,19 @@
 
 module Apidiesel
   module Handlers
-    def request_handlers
-      @request_handlers ||= []
-    end
-
-    def response_handlers
-      @response_handlers ||= []
-    end
-
-    def exception_handlers
-      @exception_handlers ||= []
-    end
-
     # Registers a handler for requests, responses and/or exceptions
     #
     # @param klass  [Class]
     # @param args   [Array<Object>] passed through to the handler
+    # @param kargs  [Array<Object>] passed through to the handler
     # @return [void]
-    def use(klass, *args, &block)
-      request_handler   = "#{klass.name}::RequestHandler".safe_constantize
-      response_handler  = "#{klass.name}::ResponseHandler".safe_constantize
-      exception_handler = "#{klass.name}::ExceptionHandler".safe_constantize
+    def use(klass, *args, **kargs, &block)
+      instance =
+        klass.new(*args, **kargs, &block)
 
-      request_handlers   << request_handler.new(*args, &block) if request_handler
-      response_handlers  << response_handler.new(*args, &block) if response_handler
-      exception_handlers << exception_handler.new(*args, &block) if exception_handler
+      config.request_handlers.append(instance) if instance.respond_to?(:handle_request)
+      config.response_handlers.append(instance) if instance.respond_to?(:handle_response)
+      config.exception_handlers.append(instance) if instance.respond_to?(:handle_exception)
     end
   end
 end

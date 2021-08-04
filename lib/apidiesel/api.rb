@@ -27,6 +27,8 @@ module Apidiesel
   #   MyApi::Api.register_endpoints
   #
   class Api
+    extend Handlers
+
     # @return [Hash{Symbol=>Object}]
     attr_reader :config
     # @return [Apidiesel::Proxies::EndpointNamespace]
@@ -45,14 +47,15 @@ module Apidiesel
     end
 
     class << self
-      include Handlers
-
       def config
         @config ||= begin
           default_endpoint_namespace =
             "#{self.name.deconstantize}::Endpoints".safe_constantize
 
           Config.new(label: name) do
+            request_handlers        value: -> { [] }
+            response_handlers       value: -> { [] }
+            exception_handlers      value: -> { [] }
             endpoint_namespace      default_endpoint_namespace
             base_url                nil
             http_method             :get
@@ -71,8 +74,9 @@ module Apidiesel
         end
       end
 
-      %i(endpoint_namespace base_url http_method http_basic_username http_basic_password
-         content_type headers ssl_verify_mode timeout parameters_as logger).each do |config_key|
+      %i(endpoint_namespace base_url http_method http_basic_username
+          http_basic_password content_type headers ssl_verify_mode
+          timeout parameters_as logger).each do |config_key|
         define_method(config_key) do |value = nil|
           value.present? ? config.set(config_key, value) : config.fetch(config_key)
         end
@@ -124,15 +128,10 @@ module Apidiesel
           endpoint_klass.new(self).build_request(*args, **kargs)
         end
 
-      request_handlers =
-        endpoint_klass.request_handlers.any? ? endpoint_klass.request_handlers : self.class.request_handlers
-
-      response_handlers =
-        endpoint_klass.response_handlers.any? ? endpoint_klass.response_handlers : self.class.response_handlers
-
       logger.tagged(endpoint_klass.name, request.id) do
-        request_handlers.each do |handler|
-          request = handler.run(request)
+        config.request_handlers.each do |handler|
+          logger.debug "executing request handler #{handler.class.name}"
+          request = handler.handle_request(request)
           break if request.executed?
         end
 
@@ -140,21 +139,20 @@ module Apidiesel
           raise request.request_exception
         end
 
-        unless request.response_body != nil
-          raise "All request handlers failed to deliver a response"
+        unless request.executed?
+          raise "All request handlers failed to execute the request"
         end
 
-        response_handlers.each do |handler|
-          request = handler.run(request)
+        config.response_handlers.each do |handler|
+          logger.debug "executing response handler #{handler.class.name}"
+          request = handler.handle_response(request)
         end
-
-        response_handler_klasses =
-          response_handlers.collect { |handler| handler.class.name.split('::')[-2] }
 
         # Execute the endpoints' `responds_with` block automatically, unless
         # the handler has been included manually in order to control the
         # order in which the handlers are run
-        unless response_handler_klasses.include?('ResponseProcessor')
+        unless config.response_handlers
+                      .any? { |handler| handler.is_a?(ResponseProcessor) }
           request.process_response
         end
 
@@ -167,11 +165,8 @@ module Apidiesel
 
       request
     rescue => e
-      exception_handlers =
-        endpoint_klass.exception_handlers.any? ? endpoint_klass.exception_handlers : self.class.exception_handlers
-
-      exception_handlers.each do |handler|
-        request = handler.run(e, request)
+      config.exception_handlers.each do |handler|
+        request = handler.handle_exception(e, request)
       end
 
       raise e

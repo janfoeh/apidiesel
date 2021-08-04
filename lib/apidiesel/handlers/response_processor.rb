@@ -2,13 +2,11 @@
 
 module Apidiesel
   module Handlers
-    module ResponseProcessor
-      class ResponseHandler
-        def run(request)
-          request.process_response
+    class ResponseProcessor < Handler
+      def handle_response(request)
+        request.process_response
 
-          request
-        end
+        request
       end
     end
   end

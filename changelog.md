@@ -153,3 +153,30 @@ Coming from the development release 0.15, 1.0.0 contains a number of breaking ch
 
   You'll receive back a failed `Apidiesel::Request` instead. To regain the previous behaviour, set 
   config values `raise_request_errors true` and `raise_response_errors true`.
+
+* Responses with an empty response body no longer automatically raise exceptions
+
+  As long as your endpoints response block doesn't expect anything different, body-less responses are now perfectly fine.
+
+* Handlers have changed
+
+  Instead of modules with specially named classes in them, handlers are now expected to be a simple class which responds to any or all of `#handle_request`, `#handle_response` or `#handle_exception`.
+
+  Handlers can now optionally be passed args, keyword args and a block through `use`. Because of this they must accept `**kargs` in their `initialize`, or simply subclass `Apidiesel::Handlers::Handler` if they don't care about initializer arguments.
+
+  A basic handler for all three situations would be
+
+  ```ruby
+  class MyHandler
+    def initialize(*_args, **_kargs)
+    end
+
+    def handle_request(request)
+    end
+
+    def handle_response(request)
+    end
+
+    def handle_exception(request)
+    end
+  ```

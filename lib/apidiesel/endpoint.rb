@@ -5,6 +5,7 @@ module Apidiesel
   # An abstract base class for API endpoints.
   class Endpoint
     extend Dsl
+    extend Handlers
 
     attr_accessor :api
     attr_reader :config
@@ -12,8 +13,6 @@ module Apidiesel
     # accessors for class instance variables
     # (class-level variables, not shared with subclasses)
     class << self
-      include Handlers
-
       attr_reader :label
 
       # Because a subclasses configuration is initialized
@@ -33,6 +32,9 @@ module Apidiesel
 
           Config.new(label: descriptive_name) do
             library_namespace     nil
+            request_handlers      value: -> { [] }
+            response_handlers     value: -> { [] }
+            exception_handlers    value: -> { [] }
             url_value             nil
             url_args              nil
             http_method           nil
