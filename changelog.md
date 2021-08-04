@@ -144,3 +144,7 @@ Coming from the development release 0.15, 1.0.0 contains a number of breaking ch
     end
   end
   ```
+
+* Handlers no longer receive the API config as an argument
+
+  Access the chained config through `request.endpoint.config` instead

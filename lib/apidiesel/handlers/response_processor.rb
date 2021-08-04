@@ -4,7 +4,7 @@ module Apidiesel
   module Handlers
     module ResponseProcessor
       class ResponseHandler
-        def run(request, _)
+        def run(request)
           request.process_response
 
           request

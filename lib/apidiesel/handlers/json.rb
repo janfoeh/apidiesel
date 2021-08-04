@@ -6,11 +6,12 @@ module Apidiesel
       class RequestHandler
         include HttpRequestHelper
 
-        def run(request, api_config)
+        def run(request)
+          config  = request.endpoint.config
           payload = nil
 
-          if api_config.parameters_as == :body ||
-            (api_config.parameters_as == :auto && api_config.http_method != :get)
+          if config.parameters_as == :body ||
+            (config.parameters_as == :auto && config.http_method != :get)
 
             payload = ::JSON.dump(request.parameters)
           end
@@ -18,12 +19,11 @@ module Apidiesel
           request.metadata[:started_at] = DateTime.now
 
           execute_request(request: request,
-                          payload: payload,
-                          api_config: api_config) do |http_request|
+                          payload: payload) do |http_request|
             http_request.headers["Accept"] =
-              api_config.headers["Accept"] || "application/json"
+              config.headers["Accept"] || "application/json"
             http_request.headers["Content-Type"] =
-              api_config.content_type || "application/json"
+              config.content_type || "application/json"
 
             http_request
           end

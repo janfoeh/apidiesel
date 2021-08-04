@@ -130,7 +130,7 @@ module Apidiesel
 
       logger.tagged(endpoint_klass.name, request.id) do
         request_handlers.each do |handler|
-          request = handler.run(request, @config)
+          request = handler.run(request)
           break if request.response_body != nil
         end
 
@@ -139,7 +139,7 @@ module Apidiesel
         end
 
         response_handlers.each do |handler|
-          request = handler.run(request, @config)
+          request = handler.run(request)
         end
 
         response_handler_klasses =
@@ -161,7 +161,7 @@ module Apidiesel
         endpoint_klass.exception_handlers.any? ? endpoint_klass.exception_handlers : self.class.exception_handlers
 
       exception_handlers.each do |handler|
-        request = handler.run(e, request, @config)
+        request = handler.run(e, request)
       end
 
       raise e

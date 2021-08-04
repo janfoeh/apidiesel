@@ -4,7 +4,7 @@ module Apidiesel
   module Handlers
     module MockResponse
       class RequestHandler
-        def run(request, api_config)
+        def run(request)
           endpoint = request.endpoint
 
           return request unless endpoint.respond_to?(:mock_response) && endpoint.mock_response
