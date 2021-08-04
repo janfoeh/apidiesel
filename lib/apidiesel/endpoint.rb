@@ -39,11 +39,11 @@ module Apidiesel
             http_basic_username   nil
             http_basic_password   nil
             content_type          nil
-            headers               value: {}
+            headers               value: -> { {} }
             parameter_validations []
             parameters_to_filter  []
-            response_filters      value: {}
-            response_formatters   value: {}
+            response_filters      value: -> { {} }
+            response_formatters   value: -> { {} }
             response_detector     response_detector
             parameter_formatter   nil
             parameters_as         :auto

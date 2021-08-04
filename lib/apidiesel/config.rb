@@ -10,7 +10,14 @@ module Apidiesel
       end
 
       def method_missing(method_name, value = nil, **kargs)
-        store[method_name.to_sym] = value || kargs[:value]
+        store[method_name.to_sym] =
+          if value
+            value
+          elsif kargs[:value].is_a?(Proc)
+            kargs[:value].call
+          elsif kargs[:value]
+            kargs[:value]
+          end
       end
 
       def respond_to_missing?(method_name, *args)
