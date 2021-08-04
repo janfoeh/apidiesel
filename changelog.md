@@ -148,3 +148,8 @@ Coming from the development release 0.15, 1.0.0 contains a number of breaking ch
 * Handlers no longer receive the API config as an argument
 
   Access the chained config through `request.endpoint.config` instead
+
+* Apidiesel no longer raises on request errors or on errors occurring while processing the response
+
+  You'll receive back a failed `Apidiesel::Request` instead. To regain the previous behaviour, set 
+  config values `raise_request_errors true` and `raise_response_errors true`.

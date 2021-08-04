@@ -64,6 +64,8 @@ module Apidiesel
             request_timeout         30
             parameters_as           :auto
             include_nil_parameters  false
+            raise_request_errors    false
+            raise_response_errors   false
             logger                  MockLogger
           end
         end
@@ -134,6 +136,10 @@ module Apidiesel
           break if request.executed?
         end
 
+        if request.raisable_request_exception?
+          raise request.request_exception
+        end
+
         unless request.response_body != nil
           raise "All request handlers failed to deliver a response"
         end
@@ -150,6 +156,10 @@ module Apidiesel
         # order in which the handlers are run
         unless response_handler_klasses.include?('ResponseProcessor')
           request.process_response
+        end
+
+        if request.raisable_response_exception?
+          raise request.response_exception
         end
 
         logger.debug "parsed response result: #{request.result.inspect}"
