@@ -69,32 +69,22 @@ module Apidiesel
     #
     # @macro [attach] responds_with
     #   @param scenario             [Symbol, Array<Symbol>]
+    #   @param array                [Boolean] this response describes an element of an Array;
+    #     setting this to `true` wraps the response in an `array {}` block
     #   @param attributes_optional  [Boolean] default for all attributes: if true, no exception
     #     is raised if an attribute is not present in the response
     #   @param attributes_allow_nil [Boolean] default for all attributes: if true, no exception
     #     will be raised if an attributes value is not of the defined type, but nil
     #   @yield [Apidiesel::Dsl::FilterBuilder]
-    def responds_with(scenario: :default, attributes_optional: false, attributes_allow_nil: true, **args, &block)
-      builder = FilterBuilder.new(optional: attributes_optional, allow_nil: attributes_allow_nil)
+    def responds_with(scenario: :default, attributes_optional: false, attributes_allow_nil: true,
+                      array: false, &block)
+      builder =
+        FilterBuilder.new(array: array, optional: attributes_optional, allow_nil: attributes_allow_nil)
 
       builder.instance_eval(&block)
 
       [*scenario].each do |scenario_label|
-        config.response_filters[scenario_label]     ||= []
-        config.response_formatters[scenario_label]  ||= []
-
-        config.response_filters[scenario_label].replace(builder.response_filters)
-        config.response_formatters[scenario_label].replace(builder.response_formatters)
-
-        if args[:unnested_hash]
-          config.response_formatters[scenario_label] << lambda do |_, response|
-            if response.is_a?(Hash) && response.keys.length == 1
-              response.values.first
-            else
-              response
-            end
-          end
-        end
+        config.processors[scenario_label] = builder.root_processor
       end
     end
 
@@ -172,18 +162,12 @@ module Apidiesel
 
       raise "Library #{from} not found" unless library
 
-      unless library.formatters.has_key?(response_name)
+      unless library.processors.has_key?(response_name)
         raise "Response #{response_name} not found in library #{from}"
       end
 
       [*scenario].each do |scenario_label|
-        config.response_filters[scenario_label]     ||= []
-        config.response_formatters[scenario_label]  ||= []
-
-        config.response_filters[scenario_label]
-              .replace(library.filters[response_name][scenario_label])
-        config.response_formatters[scenario_label]
-              .replace(library.formatters[response_name][scenario_label])
+        config.processors[scenario_label] = library.processors[response_name][scenario_label]
       end
     end
 

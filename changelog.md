@@ -2,7 +2,7 @@
 
 ## 1.0.0
 
-Coming from the development release 0.15, 1.0.0 contains a number of breaking changes:
+Coming from the development release 0.15, 1.0.0 contains a large number of breaking changes:
 
 * the term "action" has been replaced by "endpoint" throughout the gem
 
@@ -179,4 +179,15 @@ Coming from the development release 0.15, 1.0.0 contains a number of breaking ch
 
     def handle_exception(request)
     end
+  end
   ```
+
+* The option `responds_with unnested_hash: true` has been removed
+
+* Response processing has been rewritten completely
+
+  Any extensions or monkey patches to `Apidiesel::Dsl` or `Apidiesel::FilterBuilder` will have to be rewritten as well.
+
+  The good news is that response processing should now be a lot easier to extend.
+
+* `Apidiesel::Dsl#set_scope` and `Apidiesel::Dsl#response_error_if` have been removed

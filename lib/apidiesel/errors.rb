@@ -14,5 +14,13 @@ module Apidiesel
   end
 
   class ResponseError < RequestError; end
-  class MalformedResponseError < RequestError; end
+
+  class MalformedResponseError < Error
+    attr_reader :content
+
+    def initialize(msg = nil, content = nil)
+      @content = content
+      super(msg)
+    end
+  end
 end

@@ -44,6 +44,7 @@ module Apidiesel
             headers               value: -> { {} }
             parameter_validations []
             parameters_to_filter  []
+            processors            value: -> { {} }
             response_filters      value: -> { {} }
             response_formatters   value: -> { {} }
             response_detector     response_detector
@@ -189,16 +190,17 @@ module Apidiesel
           "http_#{status.first}xx".to_sym
 
         case
-        when config.search_hash_key(:response_formatters, status_code_label)
+        when config.search_hash_key(:processors, status_code_label)
           logger.debug "classified response as #{status_code_label}"
           status_code_label
 
-        when config.search_hash_key(:response_formatters, status_class_label)
+        when config.search_hash_key(:processors, status_class_label)
           logger.debug "classified response as #{status_class_label}"
           status_class_label
 
         else
-          logger.debug "classified response as #{status_code_label}, but no formatters available. Using :default"
+          logger.debug "classified response as #{status_code_label}/#{status_class_label}"\
+                        ", but no formatters available. Using :default"
           :default
         end
       }
@@ -264,20 +266,18 @@ module Apidiesel
       scenario =
         instance_exec(request: request, config: config, &config.response_detector)
 
-      filters     = config.search_hash_key(:response_filters, scenario)
-      formatters  = config.search_hash_key(:response_formatters, scenario)
+      processor = config.search_hash_key(:processors, scenario)
 
-      if filters.blank? && formatters.blank?
+      if processor.blank?
         return body
       end
 
-      filters.each { |filter| body = filter.call(body) }
-
-      result = {}
-
-      formatters.each { |filter| result = filter.call(body, result) }
-
-      result
+      begin
+        processor.execute(body, path: [:__root])
+      rescue => ex
+        request.response_exception = ex
+        nil
+      end
     end
 
       protected
