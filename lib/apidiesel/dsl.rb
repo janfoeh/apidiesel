@@ -79,12 +79,17 @@ module Apidiesel
     def responds_with(scenario: :default, attributes_optional: false, attributes_allow_nil: true,
                       array: false, &block)
       builder =
-        FilterBuilder.new(array: array, optional: attributes_optional, allow_nil: attributes_allow_nil)
+        FilterBuilder.new(
+          array: array,
+          optional: attributes_optional,
+          allow_nil: attributes_allow_nil
+        )
 
       builder.instance_eval(&block)
 
       [*scenario].each do |scenario_label|
-        config.processors[scenario_label] = builder.root_processor
+        config.processors[scenario_label]       = builder.root_processor
+        config.processor_models[scenario_label] = builder.root_processor.to_model
       end
     end
 

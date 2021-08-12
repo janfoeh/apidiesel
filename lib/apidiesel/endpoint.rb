@@ -45,6 +45,7 @@ module Apidiesel
             parameter_validations []
             parameters_to_filter  []
             processors            value: -> { {} }
+            processor_models      value: -> { {} }
             response_filters      value: -> { {} }
             response_formatters   value: -> { {} }
             response_detector     response_detector
@@ -266,14 +267,27 @@ module Apidiesel
       scenario =
         instance_exec(request: request, config: config, &config.response_detector)
 
-      processor = config.search_hash_key(:processors, scenario)
+      processor       = config.search_hash_key(:processors, scenario)
+      processor_model = config.search_hash_key(:processor_models, scenario)
 
       if processor.blank?
         return body
       end
 
       begin
-        processor.execute(body, path: [:__root])
+        if request.endpoint_arguments[:active_model] && processor_model
+          response_model =
+            processor.execute(body, path: [:__root], response_model_klass: processor_model)
+
+          unless [*response_model].all?(&:valid?)
+            request.response_exception =
+              MalformedResponseError.new("Response produced an invalid response model")
+          end
+
+          response_model
+        else
+          processor.execute(body, path: [:__root])
+        end
       rescue => ex
         request.response_exception = ex
         nil

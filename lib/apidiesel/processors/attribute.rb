@@ -53,9 +53,15 @@ module Apidiesel
       #   improve exception messages
       # @raise MalformedResponseError
       # @return [Object] the processed `input` data
-      def execute(input, path:, element_idx: nil)
-        execute_around(input, path: path, element_idx: element_idx) do |subset, path|
-          process(subset, path: path, element_idx: element_idx)
+      def execute(input, path:, element_idx: nil, response_model: nil, **kargs)
+        execute_around(
+          input,
+          path: path,
+          element_idx: element_idx,
+          response_model: response_model,
+          **kargs
+        ) do |subset, path|
+          process(subset, path: path, element_idx: element_idx, response_model: response_model, **kargs)
         end
       end
 
@@ -69,8 +75,22 @@ module Apidiesel
       #   processed element, if this element is part of an Array. Used to
       #   improve exception messages
       # @return [Object] the processed `subset` data
-      def process(subset, path: nil, element_idx: nil)
+      def process(subset, path: nil, element_idx: nil, response_model: response_model, **_kargs)
         subset
+      end
+
+      def to_model(parent_klass)
+        attribute_name = write_key
+
+        parent_klass.class_eval do
+          attribute attribute_name
+        end
+
+        unless optional
+          parent_klass.class_eval do
+            validates attribute_name, presence: true
+          end
+        end
       end
 
       # An extended #inspect with indentation for nested processors
@@ -104,8 +124,9 @@ module Apidiesel
       # @yieldreturn [Object] block must return the processed `input` input
       # @raise MalformedResponseError
       # @return [Object] returns the processed `input` input
-      def execute_around(input, path:, element_idx: nil)
-        subset = get_subset(input, path: path, element_idx: element_idx)
+      def execute_around(input, path:, element_idx: nil, response_model: nil, **_kargs)
+        subset =
+          get_subset(input, path: path, element_idx: element_idx, skip_presence_check: response_model.present?)
 
         subset = apply_filter(prefilter, subset)
         subset = map[subset] if map.present? && subset.present?
@@ -123,7 +144,7 @@ module Apidiesel
           subset = apply_filter(postfilter, subset)
         end
 
-        write_key ? { write_key => subset } : subset
+        subset
       end
 
       # Filter `value` through a `filter` proc
@@ -165,7 +186,7 @@ module Apidiesel
       #   has a `read_key` for `:b`, the subset will be `{ b: 2 }`
       # @raise MalformedResponseError
       # @return [Object]
-      def get_subset(input, path: nil, element_idx: nil)
+      def get_subset(input, path: nil, element_idx: nil, skip_presence_check: false)
         error_args = { input: input, path: path, element_idx: element_idx }
 
         if input.nil?
@@ -181,12 +202,14 @@ module Apidiesel
           raise_error "cannot extract key #{read_key} from #{input.class.name}", **error_args
         end
 
-        if !input.has_key?(read_key) && !optional
-          raise_error "missing non-optional key #{read_key}", **error_args
-        end
+        unless skip_presence_check
+          if !input.has_key?(read_key) && !optional
+            raise_error "missing non-optional key #{read_key}", **error_args
+          end
 
-        if input[read_key].nil? && !allow_nil
-          raise_error "missing non-optional value for key #{read_key}", **error_args
+          if input[read_key].nil? && !allow_nil
+            raise_error "missing non-optional value for key #{read_key}", **error_args
+          end
         end
 
         input[read_key]
