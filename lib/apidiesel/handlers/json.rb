@@ -29,12 +29,29 @@ module Apidiesel
 
         request.metadata[:finished_at] = DateTime.now
 
-        if request.http_response.code == 204
-          request.response_body = {}
-        else
-          request.response_body = ::JSON.parse(request.http_response.body)
+        return request if request.http_response.blank?
+
+        expected_content_type =
+          request.http_request.headers["Accept"]
+        received_content_type =
+          request.http_response.headers["Content-Type"]
+
+        unless (expected_content_type == received_content_type) || request.http_response.error?
+          # request.response_exception =
+          #   ResponseError.new "expected Content-Type #{expected_content_type}, "\
+          #                     "received #{received_content_type} instead"
+          config.logger.warn "expected Content-Type #{expected_content_type}, "\
+                              "received #{received_content_type} instead"
         end
 
+        unless request.http_response.body.blank?
+          request.response_body =
+            ::JSON.parse(request.http_response.body)
+        end
+
+        request
+      rescue StandardError => ex
+        request.request_exception = ex
         request
       end
     end
