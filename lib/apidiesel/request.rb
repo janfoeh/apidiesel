@@ -59,13 +59,11 @@ module Apidiesel
       @id ||= SecureRandom.hex
     end
 
-    # The response body after all processing by every involved response handler
-    # (eg., a parsed JSON response). Falls back to the raw response body if no
-    # processing took place
+    # The raw response body
     #
     # @return [Object]
-    def response_body
-      @response_body || http_response.try(:body)
+    def raw_response_body
+      http_response.try(:body)
     end
 
     # Has this request been executed already?
