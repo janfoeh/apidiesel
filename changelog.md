@@ -191,3 +191,7 @@ Coming from the development release 0.15, 1.0.0 contains a large number of break
   The good news is that response processing should now be a lot easier to extend.
 
 * `Apidiesel::Dsl#set_scope` and `Apidiesel::Dsl#response_error_if` have been removed
+
+* Exception handlers must now re-raise if you want exceptions to bubble up
+
+  Previously Apidiesel would re-raise automatically after all exception handlers were processed. It doesn't anymore, so you now have the option of dealing with them quietly if you prefer.

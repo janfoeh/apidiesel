@@ -135,9 +135,7 @@ module Apidiesel
           break if request.executed?
         end
 
-        if request.raisable_request_exception?
-          raise request.request_exception
-        end
+        request.raise_any_exception
 
         unless request.executed?
           raise "All request handlers failed to execute the request"
@@ -156,20 +154,20 @@ module Apidiesel
           request = ResponseProcessor.new.handle_response(request)
         end
 
-        if request.raisable_response_exception?
-          raise request.response_exception
-        end
+        request.raise_any_exception
 
         logger.debug "parsed response result: #{request.result.inspect}"
       end
 
       request
-    rescue => e
-      config.exception_handlers.each do |handler|
-        request = handler.handle_exception(e, request)
+    rescue => ex
+      if config.exception_handlers.any?
+        config.exception_handlers.each do |handler|
+          request = handler.handle_exception(ex, request)
+        end
+      else
+        raise ex
       end
-
-      raise e
     end
 
   end

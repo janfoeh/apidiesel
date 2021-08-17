@@ -89,7 +89,7 @@ module Apidiesel
     #
     # @return [Boolean]
     def success?
-      return false if any_exception?
+      return false if exception
       # The response body might also arrive via different means, eg.
       # from mock responses
       return true if @response_body.present? && http_response.blank?
@@ -102,7 +102,7 @@ module Apidiesel
     #
     # @return [Boolean]
     def failure?
-      return true if any_exception?
+      return true if exception
       # The response body might also arrive via different means, eg.
       # from mock responses
       return false if @response_body.present? && http_response.blank?
@@ -110,19 +110,25 @@ module Apidiesel
       http_response && http_response.error?
     end
 
-    # @return [Boolean]
-    def any_exception?
-      request_exception.present? || response_exception.present?
+    # @return [StandardError, nil]
+    def exception
+      request_exception || response_exception
     end
 
-    # Did this request produce an exception which should be raised?
+    # @raise [StandardError]
+    def raise_any_exception
+      raise request_exception if raisable_request_exception?
+      raise response_exception if raisable_response_exception?
+    end
+
+    # Did this exchange produce an exception during request which should be raised?
     #
     # @return [Boolean]
     def raisable_request_exception?
       failure? && config.raise_request_errors && request_exception
     end
 
-    # Did this request response produce an exception which should be raised?
+    # Did this exchange produce an exception during response which should be raised?
     #
     # @return [Boolean]
     def raisable_response_exception?
@@ -138,9 +144,8 @@ module Apidiesel
       # pretty, but I can't think of anything nicer right now
       begin
         @result = endpoint.process_response(self)
-      rescue ResponseError => e
-        e.request = self
-        raise e
+      rescue StandardError => ex
+        @response_exception = ex
       end
     end
 
