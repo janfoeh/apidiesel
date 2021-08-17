@@ -10,6 +10,10 @@ Coming from the development release 0.15, 1.0.0 contains a large number of break
   becomes `<MyNamespace>::Endpoints`
   and so on.
 
+* `Apidiesel::Request` is now `Apidiesel::Exchange`
+
+  The previous name always was a bit of a misnomer, since it contained both the request and the response. This lead to unfortunate naming contortions such as `request.http_request`.
+
 * `Apidiesel::CONFIG` constant has been removed
 
 * `Apidiesel::Api` DSL changes:
@@ -147,11 +151,11 @@ Coming from the development release 0.15, 1.0.0 contains a large number of break
 
 * Handlers no longer receive the API config as an argument
 
-  Access the chained config through `request.endpoint.config` instead
+  Access the chained config through `exchange.config` instead
 
 * Apidiesel no longer raises on request errors or on errors occurring while processing the response
 
-  You'll receive back a failed `Apidiesel::Request` instead. To regain the previous behaviour, set 
+  You'll receive back a failed `Apidiesel::Exchange` instead. To regain the previous behaviour, set 
   config values `raise_request_errors true` and `raise_response_errors true`.
 
 * Responses with an empty response body no longer automatically raise exceptions
@@ -171,13 +175,13 @@ Coming from the development release 0.15, 1.0.0 contains a large number of break
     def initialize(*_args, **_kargs)
     end
 
-    def handle_request(request)
+    def handle_request(exchange)
     end
 
-    def handle_response(request)
+    def handle_response(exchange)
     end
 
-    def handle_exception(request)
+    def handle_exception(exchange)
     end
   end
   ```

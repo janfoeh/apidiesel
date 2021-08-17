@@ -3,16 +3,16 @@
 module Apidiesel
   module Handlers
     class MockResponse < Handler
-      def handle_request(request)
-        endpoint = request.endpoint
+      def handle_request(exchange)
+        endpoint = exchange.endpoint
 
-        return request unless endpoint.respond_to?(:mock_response) && endpoint.mock_response
+        return exchange unless endpoint.respond_to?(:mock_response) && endpoint.mock_response
 
         file_name = endpoint.mock_response[:file]
         parser    = endpoint.mock_response[:parser]
         file      = File.read(file_name)
 
-        request.response_body = if parser
+        exchange.response_body = if parser
           parser.call(file)
 
         elsif file_name.ends_with?('.json')
@@ -25,7 +25,7 @@ module Apidiesel
           file
         end
 
-        request
+        exchange
       end
 
       module EndpointExtension

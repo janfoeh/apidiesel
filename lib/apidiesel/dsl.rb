@@ -60,8 +60,8 @@ module Apidiesel
     #
     # ```ruby
     #   class MyEndpoint < Apidiesel::Endpoint
-    #     config.response_detector ->(request:, config:) {
-    #       # Your Proc receives the current `Apidiesel::Request`, plus
+    #     config.response_detector ->(exchange:, config:) {
+    #       # Your Proc receives the current `Apidiesel::Exchange` instance, plus
     #       # the endpoints `Apidiesel::Config`, and is expected to return
     #       # either a specific scenario name `Symbol` or `:default`
     #     }

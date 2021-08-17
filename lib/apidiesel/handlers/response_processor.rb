@@ -3,10 +3,10 @@
 module Apidiesel
   module Handlers
     class ResponseProcessor < Handler
-      def handle_response(request)
-        request.process_response if request.request_successful?
+      def handle_response(exchange)
+        exchange.process_response if exchange.processable?
 
-        request
+        exchange
       end
     end
   end

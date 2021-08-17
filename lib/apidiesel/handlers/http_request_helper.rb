@@ -7,58 +7,81 @@ module Apidiesel
 
       # Executes a HTTP request
       #
-      # @param request    [Apidiesel::Request]
-      # @param payload    [Hash]  the request body
-      #   instance, as given to the handlers #run method
-      #
-      def execute_request(request:, payload: nil)
-        config       = request.endpoint.config
-        http_request = HTTPI::Request.new(request.url.try(:to_s))
+      # @param exchange [Apidiesel::Exchange]
+      # @param body     [Hash] the payload to be sent as request body
+      # @yieldparam httpi_request [Request]
+      def execute_request(exchange:, body: nil)
+        config           = exchange.endpoint.config
+        exchange.request = request = HTTPI::Request.new(exchange.url.try(:to_s))
 
         if config.parameters_as == :query ||
           (config.parameters_as == :auto && config.http_method == :get)
-          http_request.query = request.parameters
+          request.query = exchange.parameters
         end
 
         if config.headers.present?
-          http_request.headers =
-            http_request.headers
+          request.headers =
+            request.headers
                         .merge(config.headers)
         end
 
-        http_request.body =
-          if payload
-            payload
-          elsif request.parameters.any? && config.parameters_as == :body
-            request.parameters
+        request.body =
+          if body
+            body
+          elsif exchange.parameters.any? && params_as_body?(config)
+            exchange.parameters
           end
 
         if config.http_basic_username && config.http_basic_password
-          http_request.auth.basic(config.http_basic_username, config.http_basic_password)
+          request.auth.basic(config.http_basic_username, config.http_basic_password)
         end
 
-        http_request.auth.ssl.verify_mode = config.ssl_verify_mode
-        http_request.open_timeout         = config.request_timeout
-        http_request.read_timeout         = config.request_timeout
+        request.auth.ssl.verify_mode = config.ssl_verify_mode
+        request.open_timeout         = config.request_timeout
+        request.read_timeout         = config.request_timeout
 
-        if block_given?
-          http_request = yield http_request
-        end
+        # note that we yield the Apidiesel::Request, not the raw HTTPI::Request
+        yield exchange.request if block_given?
 
-        request.http_request = http_request
+        config.logger.debug "Sending request: #{request.inspect}"
 
-        config.logger.debug "Sending HTTP request: #{http_request.inspect}"
+        exchange.metadata[:started_at] = Time.now
 
         begin
-          response = HTTPI.request(request.endpoint.config.http_method, http_request)
-          request.http_response = response
-          config.logger.debug "Received HTTP response: #{response.inspect}"
-        rescue => e
-          config.logger.error "HTTP request failed: #{e}"
-          request.request_exception = e
+          exchange.response =
+            HTTPI.request(exchange.endpoint.config.http_method, request)
+
+          config.logger.debug "Received response: #{exchange.response.inspect}"
+        rescue => ex
+          config.logger.error "Request failed: #{ex}"
+          exchange.request.exception = ex
+        ensure
+          exchange.metadata[:finished_at] = Time.now
         end
 
-        request
+        exchange
+      end
+
+      # Send parameters as query parts?
+      #
+      # @param config [Config]
+      # @return [Boolean]
+      def params_as_query?(config)
+        return true if config.parameters_as == :query
+        return true if config.parameters_as == :auto && config.http_method == :get
+
+        false
+      end
+
+      # Send parameters as request body?
+      #
+      # @param config [Config]
+      # @return [Boolean]
+      def params_as_body?(config)
+        return true if config.parameters_as == :body
+        return true if config.parameters_as == :auto && config.http_method != :get
+
+        false
       end
     end
   end

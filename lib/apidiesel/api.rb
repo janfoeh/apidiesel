@@ -108,30 +108,30 @@ module Apidiesel
     end
 
     def execute_request(endpoint_klass, *args, action: nil, **kargs)
-      request =
+      exchange =
         if action
           endpoint_klass.for(action)
-                        .new(self).build_request(*args, **kargs)
+                        .new(self).build_exchange(*args, **kargs)
         else
-          endpoint_klass.new(self).build_request(*args, **kargs)
+          endpoint_klass.new(self).build_exchange(*args, **kargs)
         end
 
-      logger.tagged(endpoint_klass.name, request.id) do
+      logger.tagged(endpoint_klass.name, exchange.id) do
         config.request_handlers.each do |handler|
           logger.debug "executing request handler #{handler.class.name}"
-          request = handler.handle_request(request)
-          break if request.executed?
+          exchange = handler.handle_request(exchange)
+          break if exchange.requested?
         end
 
-        request.raise_any_exception
+        exchange.raise_any_exception
 
-        unless request.executed?
-          raise "All request handlers failed to execute the request"
+        unless exchange.requested?
+          raise "All request handlers failed to send a request"
         end
 
         config.response_handlers.each do |handler|
           logger.debug "executing response handler #{handler.class.name}"
-          request = handler.handle_response(request)
+          exchange = handler.handle_response(exchange)
         end
 
         # Execute the endpoints' `responds_with` block automatically, unless
@@ -139,19 +139,19 @@ module Apidiesel
         # order in which the handlers are run
         unless config.response_handlers
                       .any? { |handler| handler.is_a?(ResponseProcessor) }
-          request = ResponseProcessor.new.handle_response(request)
+          exchange = Handlers::ResponseProcessor.new.handle_response(exchange)
         end
 
-        request.raise_any_exception
+        exchange.raise_any_exception
 
-        logger.debug "parsed response result: #{request.result.inspect}"
+        logger.debug "parsed response result: #{exchange.result.inspect}"
       end
 
-      request
+      exchange
     rescue => ex
       if config.exception_handlers.any?
         config.exception_handlers.each do |handler|
-          request = handler.handle_exception(ex, request)
+          exchange = handler.handle_exception(ex, exchange)
         end
       else
         raise ex

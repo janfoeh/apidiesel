@@ -1,10 +1,11 @@
 # frozen_string_literal: true
 
 module Apidiesel
-  # Wrapper for API requests
-  class Request
+  # `Exchange` wraps a single request and response. You might also call it a
+  # transaction.
+  class Exchange
     # @return [Apidiesel::Endpoint] the endpoint instance which
-    #   built this request
+    #   built this exchange
     attr_accessor :endpoint
     # @return [Hash] the raw parameters passed by the user into
     #   the endpoint. Also includes parameters which are not included
@@ -15,20 +16,10 @@ module Apidiesel
     attr_accessor :parameters
     # @return [URI] the request URI
     attr_accessor :url
-    # @return [Object] the response body after all processing by every
-    #   involved response handler (eg., a parsed JSON response). Falls back
-    #   to the raw response body if no processing took place
-    attr_accessor :response_body
-    # @return [HTTPI::Request]
-    attr_accessor :http_request
-    # @return [HTTPI::Response]
-    attr_accessor :http_response
-    # @return [StandardError] an as-of-yet unraised exception which occurred
-    #   during the request
-    attr_accessor :request_exception
-    # @return [StandardError] an as-of-yet unraised exception which occurred
-    #   during the processing of the response
-    attr_accessor :response_exception
+    # @return [Request]
+    attr_reader :request
+    # @return [Response]
+    attr_reader :response
     # @return [Hash] additional freeform data attached by request and response
     #   handlers, such as timings
     attr_accessor :metadata
@@ -59,55 +50,88 @@ module Apidiesel
       @id ||= SecureRandom.hex
     end
 
-    # The raw response body
-    #
-    # @return [Object]
-    def raw_response_body
-      http_response.try(:body)
+    def request=(httpi_request)
+      @request = Request.new(httpi_request)
     end
 
-    # Has this request been executed already?
+    def response=(httpi_response)
+      @response = Response.new(httpi_response)
+    end
+
+    # Has a request been sent?
     #
     # @return [Boolean]
-    def executed?
-      success? || failure?
+    def requested?
+      request.present?
     end
 
-    # Has this request been made successfully?
-    #
-    # Ignores whether a response body has been given
-    # or processed successfully
-    def request_successful?
-      return false if http_request.blank?
-      return false if request_exception.present?
-      return false if http_response.blank?
-
-      true
-    end
-
-    # Has this request been executed successfully?
+    # Has a request been sent successfully?
     #
     # @return [Boolean]
-    def success?
-      return false if exception
-      # The response body might also arrive via different means, eg.
-      # from mock responses
-      return true if @response_body.present? && http_response.blank?
-
-      http_response && !http_response.error?
+    def requested_successfully?
+      requested? && request.successful?
     end
 
-    # Has this request been executed and either failed,
-    # or produced a failure response?
+    # Has a response been received?
     #
     # @return [Boolean]
-    def failure?
-      return true if exception
-      # The response body might also arrive via different means, eg.
-      # from mock responses
-      return false if @response_body.present? && http_response.blank?
+    def response_received?
+      response.present?
+    end
 
-      http_response && http_response.error?
+    # Has a 2xx/3xx response been received?
+    #
+    # @return [Boolean]
+    def successful_response_received?
+      response_received? && response.successful?
+    end
+
+    # Has this exchange been requested and received
+    # any response?
+    #
+    # @return [Boolean]
+    def fetched?
+      requested_successfully? && response_received?
+    end
+
+    # Has this exchange been requested and received
+    # a 2xx/3xx response?
+    #
+    # Ignores potential errors during processing.
+    #
+    # @return [Boolean]
+    def fetched_successfully?
+      fetched? && successful_response_received?
+    end
+
+    # Has this exchange been requested and received
+    # anything back that can be parsed?
+    #
+    # @return [Boolean]
+    def parseable?
+      fetched? && response.body.present?
+    end
+
+    # Has this exchange been requested and received
+    # anything back that can be processed?
+    #
+    # @return [Boolean]
+    def processable?
+      fetched? && response.parsed_body.present?
+    end
+
+    # Has this exchange been fetched and processed
+    # successfully?
+    #
+    # @return [Boolean]
+    def successful?
+      fetched_successfully? && exception.blank?
+    end
+
+    #
+    # @return [Boolean]
+    def failed?
+      !successful?
     end
 
     # @return [StandardError, nil]
@@ -115,24 +139,23 @@ module Apidiesel
       request_exception || response_exception
     end
 
+    # @return [StandardError, nil]
+    def request_exception
+      request&.exception
+    end
+
+    # @return [StandardError, nil]
+    def response_exception
+      response&.exception
+    end
+
+    # Raise the first error that occurred during the request
+    # or response phase
+    #
     # @raise [StandardError]
     def raise_any_exception
-      raise request_exception if raisable_request_exception?
-      raise response_exception if raisable_response_exception?
-    end
-
-    # Did this exchange produce an exception during request which should be raised?
-    #
-    # @return [Boolean]
-    def raisable_request_exception?
-      failure? && config.raise_request_errors && request_exception
-    end
-
-    # Did this exchange produce an exception during response which should be raised?
-    #
-    # @return [Boolean]
-    def raisable_response_exception?
-      failure? && config.raise_response_errors && response_exception
+      raise request_exception if request_exception && config.raise_request_errors
+      raise response_exception if response_exception && config.raise_response_errors
     end
 
     # Executes the endpoints `responds_with {}` block to create the final `#result`
@@ -140,12 +163,10 @@ module Apidiesel
     # @raise [Apidiesel::ResponseError]
     # @return [void]
     def process_response
-      # Reraise ResponseErrors to include ourselves. Not
-      # pretty, but I can't think of anything nicer right now
       begin
         @result = endpoint.process_response(self)
       rescue StandardError => ex
-        @response_exception = ex
+        response.exception = ex
       end
     end
 
@@ -154,10 +175,16 @@ module Apidiesel
       endpoint.config
     end
 
+    def duration
+      return unless metadata[:started_at] && metadata[:finished_at]
+
+      metadata[:finished_at] - metadata[:started_at]
+    end
+
     # @return [String]
     def to_s
       [
-        "Apidiesel::Request",
+        "Apidiesel::Exchange",
         endpoint.class.descriptive_name,
         config.http_method.to_s.upcase,
         url.try(:to_s),
@@ -168,22 +195,28 @@ module Apidiesel
     def inspect
       output = to_s
 
-      if http_request
+      if request
         output << <<~EOT
 
+          Exchange successful: #{successful?}
+
           Request:
-            - HEADERS: #{http_request.headers.inspect}
-            - BODY: #{http_request.body.inspect if http_request.body}
+            - HEADERS: #{request.headers.inspect}
+            - BODY: #{request.body.inspect if request.body}
         EOT
       end
 
-      if http_response
+      if duration
+        output << "Duration: #{duration}s"
+      end
+
+      if response
         output << <<~EOT
 
           Response:
-            - CODE: #{http_response.code}
-            - HEADERS: #{http_response.headers.inspect}
-            - BODY: #{http_response.body.inspect if http_response.body}
+            - CODE: #{response.code}
+            - HEADERS: #{response.headers.inspect}
+            - BODY: #{(response.parsed_body || response.body).inspect}
         EOT
       end
     end

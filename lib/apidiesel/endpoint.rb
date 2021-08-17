@@ -91,7 +91,7 @@ module Apidiesel
       # the `URI` object supplied to `Api.url`.
       #
       # Accepts a `Proc`, which will be called at request time with
-      # the URL constructed so far and the current `Request` object.
+      # the URL constructed so far and the current `Exchange` object.
       #
       # A string value and all keyword arguments can contain
       # placeholders for all arguments supplied to the endpoint in
@@ -99,9 +99,7 @@ module Apidiesel
       #
       # @example
       #   class Api < Apidiesel::Api
-      #     url 'https://foo.example'
-      #
-      #     register_endpoints
+      #     base_url 'https://foo.example'
       #   end
       #
       #   module Endpoints
@@ -128,9 +126,9 @@ module Apidiesel
       #     # dynamically determine the URL with a
       #     # `Proc` object
       #     class EndpointD < Apidiesel::Endpoint
-      #       url ->(url, request) {
-      #         url.path = '/' + request.endpoint_arguments[:username]
-      #                                 .downcase
+      #       url ->(url, exchange) {
+      #         url.path = '/' + exchange.endpoint_arguments[:username]
+      #                                  .downcase
       #         url
       #       }
       #
@@ -148,7 +146,7 @@ module Apidiesel
       #
       # @overload url(value)
       #   @param value [Proc] a callback that returns a URL string at request time.
-      #     Receives the URL contructed so far and the current `Request` instance.
+      #     Receives the URL contructed so far and the current `Exchange` instance.
       def url(value = nil, **kargs)
         if value && kargs.any?
           raise ArgumentError, "you cannot supply both argument and keyword args"
@@ -179,11 +177,11 @@ module Apidiesel
     # @see {Apidiesel::Dsl#responds_with}
     # @return [Proc]
     def self.default_response_detector
-      ->(request:, config:) {
+      ->(exchange:, config:) {
         status =
-          request.http_response
-                 .code
-                 .to_s
+          exchange.response
+                  .code
+                  .to_s
 
         status_code_label =
           "http_#{status}".to_sym
@@ -236,8 +234,8 @@ module Apidiesel
     # endpoints `responds_with` block.
     #
     # @option **args see specific, non-abstract `Apidiesel::Endpoint`
-    # @return [Apidiesel::Request]
-    def build_request(**args)
+    # @return [Apidiesel::Exchange]
+    def build_exchange(**args)
       params = {}
 
       config.parameter_validations.each do |validation|
@@ -254,18 +252,18 @@ module Apidiesel
         params.delete_if { |key, value| value.nil? }
       end
 
-      request = Apidiesel::Request.new(endpoint: self, endpoint_arguments: args, parameters: params)
-      request.url = build_url(args, request)
+      exchange = Apidiesel::Exchange.new(endpoint: self, endpoint_arguments: args, parameters: params)
+      exchange.url = build_url(args, exchange)
 
-      request
+      exchange
     end
 
-    def process_response(request)
+    def process_response(exchange)
       body =
-        symbolize_response_body(request.response_body)
+        symbolize_response_body(exchange.response.parsed_body)
 
       scenario =
-        instance_exec(request: request, config: config, &config.response_detector)
+        instance_exec(exchange: exchange, config: config, &config.response_detector)
 
       processor       = config.search_hash_key(:processors, scenario)
       processor_model = config.search_hash_key(:processor_models, scenario)
@@ -275,12 +273,12 @@ module Apidiesel
       end
 
       begin
-        if request.endpoint_arguments[:active_model] && processor_model
+        if exchange.endpoint_arguments[:active_model] && processor_model
           response_model =
             processor.execute(body, path: [:__root], response_model_klass: processor_model)
 
           unless [*response_model].all?(&:valid?)
-            request.response_exception =
+            exchange.response.exception =
               MalformedResponseError.new("Response produced an invalid response model")
           end
 
@@ -289,7 +287,7 @@ module Apidiesel
           processor.execute(body, path: [:__root])
         end
       rescue => ex
-        request.response_exception = ex
+        exchange.response.exception = ex
         nil
       end
     end
@@ -297,14 +295,14 @@ module Apidiesel
       protected
 
     # @return [URI]
-    def build_url(endpoint_arguments, request)
+    def build_url(endpoint_arguments, exchange)
       url = case config.url_value
       when String
         URI( config.url_value % endpoint_arguments )
       when URI
         config.url_value
       when Proc
-        config.url_value.call(base_url, request)
+        config.url_value.call(base_url, exchange)
       when nil
         if config.base_url
           config.base_url

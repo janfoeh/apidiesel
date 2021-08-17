@@ -5,10 +5,10 @@ module Apidiesel
   class InputError < Error; end
 
   class RequestError < Error
-    attr_accessor :request
+    attr_accessor :exchange
 
-    def initialize(msg = nil, request = nil)
-      @request = request
+    def initialize(msg = nil, exchange = nil)
+      @exchange = exchange
       super(msg)
     end
   end
