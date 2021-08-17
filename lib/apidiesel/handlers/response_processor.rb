@@ -4,7 +4,7 @@ module Apidiesel
   module Handlers
     class ResponseProcessor < Handler
       def handle_response(request)
-        request.process_response
+        request.process_response if request.request_successful?
 
         request
       end
