@@ -14,7 +14,7 @@ module Apidiesel
     # @param allow_nil [Boolean] default for all attributes: if true, no exception
     #   will be raised if an attributes value is not of the defined type, but nil
     # @!visibility private
-    def initialize(optional: false, allow_nil: true, array: false)
+    def initialize(optional: true, allow_nil: true, array: false)
       @processors     = []
       @expect_array   = array
       @global_options = { optional: optional, allow_nil: allow_nil }

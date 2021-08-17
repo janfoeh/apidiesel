@@ -76,7 +76,7 @@ module Apidiesel
     #   @param attributes_allow_nil [Boolean] default for all attributes: if true, no exception
     #     will be raised if an attributes value is not of the defined type, but nil
     #   @yield [Apidiesel::Dsl::FilterBuilder]
-    def responds_with(scenario: :default, attributes_optional: false, attributes_allow_nil: true,
+    def responds_with(scenario: :default, attributes_optional: true, attributes_allow_nil: true,
                       array: false, &block)
       builder =
         FilterBuilder.new(
