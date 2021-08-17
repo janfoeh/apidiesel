@@ -153,7 +153,7 @@ module Apidiesel
         # order in which the handlers are run
         unless config.response_handlers
                       .any? { |handler| handler.is_a?(ResponseProcessor) }
-          request.process_response
+          request = ResponseProcessor.new.handle_response(request)
         end
 
         if request.raisable_response_exception?
