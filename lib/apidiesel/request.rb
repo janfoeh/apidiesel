@@ -73,6 +73,18 @@ module Apidiesel
       success? || failure?
     end
 
+    # Has this request been made successfully?
+    #
+    # Ignores whether a response body has been given
+    # or processed successfully
+    def request_successful?
+      return false if http_request.blank?
+      return false if request_exception.present?
+      return false if http_response.blank?
+
+      true
+    end
+
     # Has this request been executed successfully?
     #
     # @return [Boolean]
