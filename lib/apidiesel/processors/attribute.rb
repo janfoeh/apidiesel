@@ -234,9 +234,9 @@ module Apidiesel
 
           message_intro << "[#{element_idx}]" if element_idx
 
-          raise MalformedResponseError, "#{message_intro} #{message}", input
+          raise MalformedResponseError.new("#{message_intro} #{message}", input)
         else
-          raise MalformedResponseError, message, input
+          raise MalformedResponseError.new(message, input)
         end
       end
     end
