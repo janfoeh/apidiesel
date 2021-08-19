@@ -7,5 +7,6 @@
 /pkg/
 /spec/reports/
 /tmp/
+.pry_history
 apidiesel.sublime-project
 apidiesel.sublime-workspace
