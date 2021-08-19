@@ -75,7 +75,7 @@ module Apidiesel
       #   processed element, if this element is part of an Array. Used to
       #   improve exception messages
       # @return [Object] the processed `subset` data
-      def process(subset, path: nil, element_idx: nil, response_model: response_model, **_kargs)
+      def process(subset, path: nil, element_idx: nil, response_model: nil, **_kargs)
         subset
       end
 
