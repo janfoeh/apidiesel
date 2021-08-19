@@ -92,7 +92,7 @@ module Apidiesel
     end
 
     def logger
-      self.class.logger
+      config.logger
     end
 
     def method_missing(method_name, *args, **kargs, &block)
