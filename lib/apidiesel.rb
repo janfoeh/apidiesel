@@ -3,6 +3,7 @@
 require 'uri'
 require 'httpi'
 require 'active_support/all'
+require "active_model"
 
 HTTPI.log = false
 
