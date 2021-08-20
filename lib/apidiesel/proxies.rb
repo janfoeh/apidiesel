@@ -9,6 +9,9 @@ module Apidiesel
       attr_reader :api
 
       def initialize(api:, namespace:)
+        raise ArgumentError,
+              "endpoint namespace missing" unless namespace && namespace.is_a?(Module)
+
         @api       = api
         @namespace = namespace
       end
