@@ -5,26 +5,40 @@ module Apidiesel
   # This is the abstract main interface class for the Apidiesel gem. It is meant to be
   # inherited from:
   #
-  #   module MyApi
-  #     class Api < Apidiesel::Api
-  #     end
+  # ```ruby
+  # module MyApi
+  #   class Api < Apidiesel::Api
   #   end
+  # end
+  # ```
   #
   # Apidiesel expects there to be an `Endpoints` namespace alongside the same scope,
   # in which it can find the individual endpoint definitions for this API:
   #
-  #   module MyApi
-  #     class Api < Apidiesel::Api
-  #     end
-  #
-  #     module Endpoints
-  #       class Endpoint1; end
-  #       class Endpoint2; end
-  #     end
+  # ```ruby
+  # module MyApi
+  #   class Api < Apidiesel::Api
+  #     http_method :post
   #   end
   #
-  #   # Registers endpoints Endpoint1 and Endpoint2
-  #   MyApi::Api.register_endpoints
+  #   module Endpoints
+  #     class Endpoint1; end
+  #     class Endpoint2; end
+  #
+  #     module SomeNamespace
+  #       class Endpoint3
+  #         http_method :get
+  #       end
+  #     end
+  #   end
+  # end
+  #
+  # api = MyApi::Api.new
+  #
+  # api.endpoint1.post
+  # api.endpoint2.post
+  # api.some_namespace.endpoint3.get
+  # ```
   #
   class Api
     extend Handlers
