@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module Apidiesel
-  # `Exchange` wraps a single request and response. You might also call it a
-  # transaction.
+  # `Exchange` wraps a single request and response — you might also call it a
+  # transaction. You receive an instance of this when executing an endpoint.
   class Exchange
     # @return [Apidiesel::Endpoint] the endpoint instance which
     #   built this exchange

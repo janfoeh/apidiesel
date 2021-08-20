@@ -1,7 +1,43 @@
 # frozen_string_literal: true
 
 module Apidiesel
+  # `Config` is a key-value store that allows for multiple stores
+  # to be chained together in a hierarchical fashion.
+  #
+  # ```ruby
+  # parent =
+  #   Apidiesel::Config.new
+  # child =
+  #   Apidiesel::Config.new(parent: parent)
+  #
+  # parent.set :foo, "foo"
+  #
+  # # If a child doesn't have its own value for a key, the parent
+  # # hierarchy is traversed until it is found
+  # child.foo
+  # # => "foo"
+  #
+  # child.set :foo, "bar"
+  # child.foo
+  # # => "bar"
+  # parent.foo
+  # # => "foo"
+  # ```
   class Config
+    # If you initialize a `Config` store with a block, the block
+    # is executed in the scope of a `Setter` instance
+    #
+    # ```ruby
+    # config =
+    #   Apidiesel::Config.new do
+    #     # scope is `Setter.new`
+    #     key1 :foo
+    #     key2 :bar
+    #   end
+    #
+    # config.key1
+    # # => :foo
+    # ```
     class Setter
       attr_reader :store
 
@@ -29,6 +65,22 @@ module Apidiesel
     attr_accessor :label
     attr_accessor :parent
 
+    # ```ruby
+    # config =
+    #   Apidiesel::Config.new do
+    #     # scope is `Setter.new`
+    #     key1 :foo
+    #     key2 :bar
+    #   end
+    #
+    # config.key1
+    # # => :foo
+    # ```
+    #
+    # @param config [Hash] the initial keys and values
+    # @param parent [Apidiesel::Config, nil] a parent store
+    # @param label  [Symbol, String, nil] a store name. Helps with debugging
+    # @yield A given block will be executed in the scope of a `Setter` instance
     def initialize(config = {}, parent: nil, label: nil, &block)
       @label  = label
       @store  = config
@@ -43,6 +95,11 @@ module Apidiesel
       end
     end
 
+    # Is a configuration key `key` configured?
+    #
+    # @param key        [Symbol]
+    # @param only_self  [Boolean] do not check parent stores
+    # @return [Boolean]
     def configured?(key, only_self: false)
       if store.has_key?(key)
         return true
@@ -53,18 +110,33 @@ module Apidiesel
       parent.try(:configured?, key)
     end
 
+    # Is a configuration key `key` configured and a value `#present?`
+    #
+    # @param key        [Symbol]
+    # @param only_self  [Boolean] do not check parent stores
+    # @return [Boolean]
     def present?(key, only_self: false)
       configured?(key, only_self: only_self) && fetch(key, only_self: only_self).present?
     end
 
+    # The topmost store in the configuration chain
+    # @return [Apidiesel::Config]
     def root
       parent ? parent.root : self
     end
 
+    # The complete chain of stores excluding `self`
+    #
+    # @return [Array<Apidiesel::Config>]
     def parents
       parent ? parent.parents.prepend(parent) : []
     end
 
+    # Fetch the value for key `key`
+    #
+    # @param key        [Symbol]
+    # @param only_self  [Boolean] do not check parent stores
+    # @return [Object]
     def fetch(key, only_self: false)
       key = key.to_sym
 
@@ -75,6 +147,11 @@ module Apidiesel
       end
     end
 
+    # Set the value for key `key`
+    #
+    # @param key   [Symbol]
+    # @param value [Object]
+    # @return [Object]
     def set(key, value)
       setter_method = "#{key}="
       key           = key.to_sym
@@ -86,10 +163,20 @@ module Apidiesel
       end
     end
 
+    # Specialized setter for `#set(:url, value)` that casts
+    # value as `URI`
+    #
+    # @param value [String]
+    # @return [void]
     def url=(value)
       store[:url] = value.present? ? URI.parse(value) : value
     end
 
+    # Specialized setter for `#set(:base_url, value)` that casts
+    # value as `URI`
+    #
+    # @param value [String]
+    # @return [void]
     def base_url=(value)
       store[:base_url] = value.present? ? URI.parse(value) : value
     end

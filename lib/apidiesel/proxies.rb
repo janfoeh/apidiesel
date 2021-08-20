@@ -2,6 +2,23 @@
 
 module Apidiesel
   module Proxies
+    # This proxy is used internally by your `Api` instance to look up
+    # endpoint classes and namespaces via `method_missing`.
+    #
+    # If your endpoint namespace contains further subnamespaces, you
+    # can access on of them directly:
+    #
+    # ```ruby
+    # module Endpoints
+    #   module Subnamespace
+    #     class Endpoint < Apidiesel::Endpoint; end
+    #   end
+    # end
+    #
+    # api = MyApi.new
+    # api.subnamespace
+    # # => Apidiesel::Proxies::EndpointNamespace
+    # ```
     class EndpointNamespace
       # @return [Module] the namespace module this proxy represents
       attr_reader :namespace
@@ -66,6 +83,19 @@ module Apidiesel
       end
     end
 
+    # This proxy is used to represent the available actions on an
+    # endpoint. This is what is returned when you access an endpoint
+    # via your `Api` base instance.
+    #
+    # ```ruby
+    # module Endpoints
+    #   class MyEndpoint < Apidiesel::Endpoint; end
+    # end
+    #
+    # api = MyApi.new
+    # api.my_endpoint
+    # # => Apidiesel::Proxies::EndpointActions
+    # ```
     class EndpointActions
       # @return [Module] the endpoint class this proxy represents
       attr_reader :endpoint

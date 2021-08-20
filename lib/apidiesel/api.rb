@@ -1,9 +1,7 @@
 # frozen_string_literal: true
 
 module Apidiesel
-
-  # This is the abstract main interface class for the Apidiesel gem. It is meant to be
-  # inherited from:
+  # @abstract This is the abstract main interface class for Apidiesel:
   #
   # ```ruby
   # module MyApi
@@ -11,6 +9,13 @@ module Apidiesel
   #   end
   # end
   # ```
+  #
+  # It has three purposes:
+  #
+  # 1. central configuration of API-wide settings, such as a `base_url`, SSL settings,
+  #    logging and so on
+  # 2. loading of `Apidiesel::Handlers` which build requests and process responses
+  # 3. actually executing requests to your endpoints
   #
   # Apidiesel expects there to be an `Endpoints` namespace alongside the same scope,
   # in which it can find the individual endpoint definitions for this API:

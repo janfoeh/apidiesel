@@ -1,8 +1,220 @@
 # frozen_string_literal: true
 
 module Apidiesel
-
-  # An abstract base class for API endpoints.
+  # @abstract An abstract base class for defining API endpoints
+  #
+  # An endpoint represents one or more URLs you can execute one
+  # or more actions on, the parameters required and the response
+  # expected to return.
+  #
+  # Take a JSON API as an example:
+  #
+  # ```ruby
+  # class MyApi < Apidiesel::Api
+  #   use Apidiesel::Handlers::JSON
+  # end
+  # ```
+  #
+  # For a simple endpoint that needs no parameters and no processing
+  # of the response, our class would look like this:
+  #
+  # ```ruby
+  # module Endpoints
+  #   class User < Apidiesel::Endpoint
+  #     url "https://www.example.com/users"
+  #     http_method :get
+  #   end
+  # end
+  #
+  # # and we call it like this:
+  # api = MyApi.new
+  # api.user.get
+  # ```
+  #
+  # If your API has multiple endpoints, it makes sense to set the base_url
+  # on your `Api` base instead:
+  #
+  # ```ruby
+  # class MyApi < Apidiesel::Api
+  #   use Apidiesel::Handlers::JSON
+  #   base_url "https://www.example.com"
+  # end
+  #
+  # module Endpoints
+  #   class User < Apidiesel::Endpoint
+  #     url path: "/users"
+  #     http_method :get
+  #   end
+  # end
+  # ```
+  #
+  # Assume `/users` accepted both `GET` and `POST` requests. We can model that within the
+  # same Endpoint class through `action` blocks.
+  # Action names can be chosen freely, but we're simply naming them after their
+  # HTTP methods here:
+  #
+  # ```ruby
+  # module Endpoints
+  #   class User < Apidiesel::Endpoint
+  #     url path: "/users"
+  #
+  #     action(:get) do
+  #       http_method :get
+  #     end
+  #
+  #     action(:post) do
+  #       http_method :post
+  #     end
+  #   end
+  # end
+  #
+  # api.user.get
+  # api.user.post
+  # ```
+  #
+  # Assume `/users` optionally accepted a parameter, such as `/users?only_active=true`:
+  #
+  # ```ruby
+  # module Endpoints
+  #   class User < Apidiesel::Endpoint
+  #     url path: "/users"
+  #
+  #     action(:get) do
+  #       http_method :get
+  #
+  #       expects do
+  #         boolean :only_active, optional: true
+  #       end
+  #     end
+  #
+  #     action(:post) do
+  #       http_method :post
+  #     end
+  #   end
+  # end
+  #
+  # api.user.get
+  # api.user.get(only_active: true)
+  # ```
+  #
+  # If a non-optional parameter is missing when the endpoint is executed, an `Apidiesel::InputError`
+  # is raised.
+  #
+  # Assume `GET /users` returns an array of user objects, with a lot more attributes than we need.
+  # By defining what we want the response to look like, we can customize the response value with a
+  # `responds_with` block.
+  #
+  # Also assume that both `GET` and `POST` actually return data in the same format. In that case, we
+  # can define the response on the class itself instead of twice on each action - just as with the
+  # URL configuration, the actions inherit everything else.
+  #
+  # ```ruby
+  # module Endpoints
+  #   class User < Apidiesel::Endpoint
+  #     url path: "/users"
+  #
+  #     responds_with do
+  #       array do
+  #         integer :id
+  #         string :username
+  #         string :email
+  #       end
+  #     end
+  #
+  #     action(:get) do
+  #       http_method :get
+  #
+  #       expects do
+  #         boolean :only_active, optional: true
+  #       end
+  #     end
+  #
+  #     action(:post) do
+  #       http_method :post
+  #     end
+  #   end
+  # end
+  # ```
+  #
+  # If your endpoint responds differently under different circumstances, for example in case
+  # of errors, you can configure multiple _response scenarios_.
+  #
+  # Unnamed response blocks as above are _default_ scenarios. They are used if no better matching
+  # response block is found.
+  #
+  # You can configure responses for one or more specific HTTP status codes (eg. 404), or status
+  # code classes (eg. 4xx).
+  #
+  # ```ruby
+  # module Endpoints
+  #   class User < Apidiesel::Endpoint
+  #     url path: "/users"
+  #
+  #     responds_with do
+  #       array do
+  #         integer :id
+  #         string :username
+  #         string :email
+  #       end
+  #     end
+  #
+  #     responds_with scenario: [:http_4xx, :http_500] do
+  #       integer :error_code
+  #       string :error_message
+  #     end
+  #
+  #     action(:get) do
+  #       http_method :get
+  #
+  #       expects do
+  #         boolean :only_active, optional: true
+  #       end
+  #     end
+  #
+  #     action(:post) do
+  #       http_method :post
+  #     end
+  #   end
+  # end
+  # ```
+  #
+  # Because endpoint classes can inherit configuration from parent classes,
+  # a central parent class is a good place for configuring shared error responses:
+  #
+  # ```ruby
+  # class Endpoint < Apidiesel::Endpoint
+  #   responds_with scenario: [:http_4xx, :http_500] do
+  #     integer :error_code
+  #     string :error_message
+  #   end
+  # end
+  #
+  # module Endpoints
+  #   class User < Endpoint
+  #     url path: "/users"
+  #
+  #     responds_with do
+  #       array do
+  #         integer :id
+  #         string :username
+  #         string :email
+  #       end
+  #     end
+  #
+  #     action(:get) do
+  #       http_method :get
+  #
+  #       expects do
+  #         boolean :only_active, optional: true
+  #       end
+  #     end
+  #
+  #     action(:post) do
+  #       http_method :post
+  #     end
+  #   end
+  # end
+  # ```
   class Endpoint
     extend Dsl
     extend Handlers
@@ -10,8 +222,6 @@ module Apidiesel
     attr_accessor :api
     attr_reader :config
 
-    # accessors for class instance variables
-    # (class-level variables, not shared with subclasses)
     class << self
       attr_reader :label
 
