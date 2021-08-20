@@ -186,7 +186,7 @@ module Apidiesel
         status_code_label =
           "http_#{status}".to_sym
         status_class_label =
-          "http_#{status.first}xx".to_sym
+          "http_#{status[0]}xx".to_sym
 
         case
         when config.search_hash_key(:processors, status_code_label)
