@@ -72,10 +72,10 @@ module Apidiesel
             "#{self.name.deconstantize}::Endpoints".safe_constantize
 
           Config.new(label: name) do
-            request_handlers        value: -> { [] }
-            response_handlers       value: -> { [] }
-            exception_handlers      value: -> { [] }
-            endpoint_namespace      default_endpoint_namespace
+            request_handlers        value: -> { [] }, unclonable: true
+            response_handlers       value: -> { [] }, unclonable: true
+            exception_handlers      value: -> { [] }, unclonable: true
+            endpoint_namespace      default_endpoint_namespace, unclonable: true
             base_url                nil
             http_method             :get
             http_basic_username     nil
@@ -88,7 +88,7 @@ module Apidiesel
             include_nil_parameters  false
             raise_request_errors    false
             raise_response_errors   false
-            logger                  MockLogger
+            logger                  MockLogger, unclonable: true
           end
         end
       end
