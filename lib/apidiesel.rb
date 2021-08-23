@@ -2,7 +2,7 @@
 
 require 'uri'
 require 'httpi'
-require 'active_support/all'
+require "active_support"
 require "active_model"
 
 HTTPI.log = false
@@ -13,6 +13,8 @@ require 'apidiesel/errors'
 require 'apidiesel/handlers'
 require 'apidiesel/config'
 require 'apidiesel/proxies'
+require 'apidiesel/parameters/parameter'
+require 'apidiesel/parameters/date_time'
 require 'apidiesel/expectation_builder'
 require 'apidiesel/filter_builder'
 require 'apidiesel/library'

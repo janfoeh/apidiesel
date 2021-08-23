@@ -5,12 +5,16 @@ module Apidiesel
   # when defining an API endpoint.
   class ExpectationBuilder
     # @!visibility private
-    attr_accessor :parameter_validations, :parameters_to_filter
-
+    attr_accessor :parameters
     # @!visibility private
     def initialize
-      @parameter_validations  = []
-      @parameters_to_filter   = []
+      @parameters = {}
+    end
+
+    def parameters_to_filter
+      parameters.values
+                .select { |param| !param.submit }
+                .map(&:output_name)
     end
 
     # Defines a string parameter.
@@ -26,28 +30,33 @@ module Apidiesel
     # ``
     #
     # @!macro [new] expectation_types
-    #   @param param_name [Symbol] name of the parameter
-    #   @option args [Boolean] :optional (false) defines whether this parameter may be omitted
-    #   @option args [Symbol]  :optional_if_present param_name is optional, if the parameter given here is present instead
-    #   @option args [Symbol]  :required_if_present param_name is required if param_name is also present
-    #   @option args [Symbol]  :submitted_as submit param_name to the API under the name given here
-    #   @option args [Object]  :default a default parameter to be set when no value is specified
-    #   @option args [Boolean, Symbol] :fetch if not provided by the caller, query the base
+    #   @param name [Symbol] name of the parameter
+    #   @option kargs [Boolean] :optional (false) defines whether this parameter may be omitted
+    #   @option kargs [Symbol]  :optional_if_present name is optional, if the parameter given here is present instead
+    #   @option kargs [Symbol]  :required_if_present name is required if name is also present
+    #   @option kargs [Symbol]  :submitted_as submit name to the API under the name given here
+    #   @option kargs [Object]  :default a default parameter to be set when no value is specified
+    #   @option kargs [Boolean, Symbol] :fetch if not provided by the caller, query the base
     #     `Apidiesel::Api` object for it. It will be taken from either `config[<parameter_name>]`, or the return
     #     value of a method with the same name. If you pass a Symbol, this will be used as the name to lookup
     #     instead
-    #   @option args [true, false] :submit (true) set to `false` for arguments that should not be submitted
+    #   @option kargs [true, false] :submit (true) set to `false` for arguments that should not be submitted
     #                                               as API parameters
-    #   @option args [Enumerable] :allowed_values only accept the values in this Enumerable.
+    #   @option kargs [Enumerable] :allowed_values only accept the values in this Enumerable.
     #                               If Enumerable is a Hash, use the hash values to define what is actually
     #                               sent to the server. Example: `:allowed_values => {:foo => "f"}` allows
     #                               the value ':foo', but sends it as 'f'
-    #   @option args [Symbol, Proc] :typecast A method name or Proc for typecasting the given value into
+    #   @option kargs [Symbol, Proc] :typecast A method name or Proc for typecasting the given value into
     #                               the form it will be submitted in
     #   @return [nil]
-    def string(param_name, **args)
-      validation_builder(:to_s, param_name, **args)
-      parameters_to_filter << param_name if args[:submit] == false
+    def string(name, **kargs)
+      parameters[name] =
+        Parameters::Parameter.new(
+          input_name:   name,
+          output_name:  kargs.delete(:submitted_as),
+          typecast:     :to_s,
+          **kargs
+        )
     end
 
     # Defines a symbol parameter
@@ -61,9 +70,14 @@ module Apidiesel
     #   end
     #
     # @!macro expectation_types
-    def symbol(param_name, **args)
-      validation_builder(:to_s, param_name, **args)
-      parameters_to_filter << param_name if args[:submit] == false
+    def symbol(name, **kargs)
+      parameters[name] =
+        Parameters::Parameter.new(
+          input_name:   name,
+          output_name:  kargs.delete(:submitted_as),
+          typecast:     :to_s,
+          **kargs
+        )
     end
 
     # Defines an integer parameter.
@@ -76,9 +90,14 @@ module Apidiesel
     #   end
     #
     # @!macro expectation_types
-    def integer(param_name, **args)
-      validation_builder(:to_i, param_name, **args)
-      parameters_to_filter << param_name if args[:submit] == false
+    def integer(name, **kargs)
+      parameters[name] =
+        Parameters::Parameter.new(
+          input_name:   name,
+          output_name:  kargs.delete(:submitted_as),
+          typecast:     :to_i,
+          **kargs
+        )
     end
 
     # Defines a boolean parameter.
@@ -91,11 +110,14 @@ module Apidiesel
     #   end
     #
     # @!macro expectation_types
-    def boolean(param_name, **args)
-      args[:typecast] = nil
-
-      validation_builder(nil, param_name, **args)
-      parameters_to_filter << param_name if args[:submit] == false
+    def boolean(name, **kargs)
+      parameters[name] =
+        Parameters::Parameter.new(
+          input_name:     name,
+          output_name:    kargs.delete(:submitted_as),
+          allowed_values: [true, false],
+          **kargs
+        )
     end
 
     # Defines a date, time or datetime parameter.
@@ -107,16 +129,15 @@ module Apidiesel
     #   end
     #
     # @!macro expectation_types
-    # @option args [String] :format a format string as supported by Rubys `#strftime`
-    def datetime(param_name, **args)
-      if args[:format]
-        args[:processor] = ->(value) { value.try(:strftime, args[:format]) }
-      end
-
-      args[:typecast] = nil
-
-      validation_builder(:strftime, param_name, **args)
-      parameters_to_filter << param_name if args[:submit] == false
+    # @option kargs [String] :format a format string as supported by Rubys `#strftime`
+    def datetime(name, **kargs)
+      parameters[name] =
+        Parameters::DateTime.new(
+          input_name:     name,
+          output_name:    kargs.delete(:submitted_as),
+          allowed_values: [true, false],
+          **kargs
+        )
     end
 
     alias_method :time, :datetime
@@ -132,100 +153,16 @@ module Apidiesel
     #   end
     #
     # @!macro expectation_types
-    # @option args [Class] :klass the expected class of the value
-    def object(param_name, **args)
-      args[:typecast] = args[:typecast] || :to_hash
-
-      type_check = ->(value, param_name) {
-        if args[:klass] && !value.is_a?(args[:klass])
-          raise Apidiesel::InputError, "arg #{param_name} must be a #{args[:klass].name}"
-        end
-      }
-
-      validation_builder(type_check, param_name, **args)
-      parameters_to_filter << param_name if args[:submit] == false
-    end
-
-      protected
-
-    def validation_builder(duck_typing_check, param_name, typecast: duck_typing_check, **args)
-      options = args
-
-      parameter_validations << lambda do |api, config, given_params, processed_params|
-        given_value = given_params[param_name]
-
-        if options[:fetch] && given_value.nil?
-          lookup_name =
-            options[:fetch].is_a?(Symbol) ? options[:fetch] : param_name
-
-          if config.fetch(lookup_name)
-            given_value = config.fetch(lookup_name)
-
-          elsif api.respond_to?(lookup_name)
-            given_value = api.send(lookup_name)
-          end
-        end
-
-        if options[:default]
-          given_params[param_name] ||= options[:default]
-        end
-
-        if options.has_key?(:optional_if_present)
-          options[:optional] = true unless given_params[ options[:optional_if_present] ].blank?
-        end
-
-        if options.has_key?(:required_if_present)
-          options[:optional] = given_params[ options[:required_if_present] ].present? ? false : true
-        end
-
-        unless options.has_key?(:optional) && options[:optional] == true
-          raise Apidiesel::InputError, "missing arg: #{param_name} - options: #{options.inspect}" if given_value.blank?
-
-          if duck_typing_check.is_a?(Proc)
-            duck_typing_check.call(given_value, param_name)
-          elsif !duck_typing_check.nil?
-            raise Apidiesel::InputError, "invalid arg #{param_name}: must respond to #{duck_typing_check}" unless given_value.respond_to?(duck_typing_check)
-          end
-        end
-
-        if options[:typecast] && given_value
-          given_value =
-            case options[:typecast]
-            when Symbol
-              given_value.send(options[:typecast])
-            when Proc
-              options[:typecast].call(given_values)
-            end
-        end
-
-
-        if options.has_key?(:allowed_values) && !given_value.blank?
-          unless options[:allowed_values].include?(given_value)
-            raise Apidiesel::InputError, "value '#{given_value}' is not a valid value for #{param_name}"
-          end
-
-          if options[:allowed_values].is_a? Hash
-            given_value = options[:allowed_values][ given_value ]
-          end
-        end
-
-        if options[:processor]
-          given_value = options[:processor].call(given_value)
-        end
-
-        if options[:submitted_as]
-          processed_params[ options[:submitted_as] ] = given_value
-        else
-          processed_params[param_name] = given_value
-        end
-
-        # Values marked `submit: false` we write back into the parameters hash
-        # passed in when the endpoint was invoked.
-        # This is primarily used for values needed in URL placeholders.
-        if options[:submit] == false
-          given_params[param_name] = given_value
-        end
-      end
+    # @option kargs [Class] :klass the expected class of the value
+    def object(name, typecast: :to_hash, **kargs)
+      parameters[name] =
+        Parameters::DateTime.new(
+          input_name:     name,
+          output_name:    kargs.delete(:submitted_as),
+          allowed_values: [true, false],
+          typecast:       typecast,
+          **kargs
+        )
     end
   end
 end

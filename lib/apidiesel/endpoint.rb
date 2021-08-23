@@ -252,8 +252,8 @@ module Apidiesel
             http_basic_password   nil
             content_type          nil
             headers               value: -> { {} }
-            parameter_validations []
-            parameters_to_filter  []
+            parameters            value: -> { {} }
+            parameters_to_filter  value: -> { [] }
             processors            value: -> { {} }
             processor_models      value: -> { {} }
             response_filters      value: -> { {} }
@@ -446,26 +446,36 @@ module Apidiesel
     # @option **args see specific, non-abstract `Apidiesel::Endpoint`
     # @return [Apidiesel::Exchange]
     def build_exchange(**args)
-      params = {}
+      params            = {}
+      submittable_params = {}
 
-      config.parameter_validations.each do |validation|
-        validation.call(api, config, args, params)
+      config.parameters.each do |name, parameter|
+        params.merge!(parameter.process(parameters: args, config: config))
       end
 
       if config.parameter_formatter
-        params = config.parameter_formatter.call(params)
+        submittable_params = config.parameter_formatter.call(params)
       else
-        params.except!(*config.parameters_to_filter)
+        submittable_params = params.except(*config.parameters_to_filter)
       end
 
       unless config.include_nil_parameters
-        params.delete_if { |key, value| value.nil? }
+        submittable_params.delete_if { |key, value| value.nil? }
       end
 
-      exchange = Apidiesel::Exchange.new(endpoint: self, endpoint_arguments: args, parameters: params)
-      exchange.url = build_url(args, exchange)
+      exchange =
+        Apidiesel::Exchange.new(
+          endpoint: self,
+          endpoint_arguments: params,
+          parameters: submittable_params
+        )
+
+      exchange.url = build_url(params, exchange)
 
       exchange
+    # rescue StandardError => ex
+      # TODO add static requests and responses, then persist exception
+      # exchange.request_exception
     end
 
     def process_response(exchange)

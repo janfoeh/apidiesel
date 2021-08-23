@@ -19,7 +19,7 @@ module Apidiesel
       builder = ExpectationBuilder.new
       builder.instance_eval(&block)
 
-      config.parameter_validations.replace(builder.parameter_validations)
+      config.parameters.replace(builder.parameters)
       config.parameters_to_filter.replace(builder.parameters_to_filter)
     end
 
