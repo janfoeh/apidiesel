@@ -41,12 +41,14 @@ module Apidiesel
     class Setter
       attr_reader :store
 
+      VALUE = Struct.new(:name, :value, :unclonable)
+
       def initialize
-        @store = {}
+        @store = []
       end
 
-      def method_missing(method_name, value = nil, **kargs)
-        store[method_name.to_sym] =
+      def method_missing(method_name, value = nil, unclonable: false, **kargs)
+        value =
           if value
             value
           elsif kargs[:value].is_a?(Proc)
@@ -54,6 +56,8 @@ module Apidiesel
           elsif kargs[:value]
             kargs[:value]
           end
+
+        store << VALUE.new(method_name.to_sym, value, unclonable)
       end
 
       def respond_to_missing?(method_name, *args)
@@ -62,6 +66,7 @@ module Apidiesel
     end
 
     attr_reader :store
+    attr_reader :unclonables
     attr_accessor :label
     attr_accessor :parent
 
@@ -82,16 +87,20 @@ module Apidiesel
     # @param label  [Symbol, String, nil] a store name. Helps with debugging
     # @yield A given block will be executed in the scope of a `Setter` instance
     def initialize(config = {}, parent: nil, label: nil, &block)
-      @label  = label
-      @store  = config
-      @parent = parent
+      @label       = label
+      @store       = config
+      @unclonables = []
+      @parent      = parent
 
       if block_given?
         setter = Setter.new
 
         setter.instance_eval(&block)
 
-        setter.store.each { |key, value| set(key, value) }
+        setter.store.each do |value|
+          set(value.name, value.value)
+          unclonables << value.name if value.unclonable
+        end
       end
     end
 
@@ -206,6 +215,12 @@ module Apidiesel
       parent ? parent.search_hash_key(attrib, key, skip_existence_check: true) : nil
     end
 
+    def unclonable?(attrib)
+      return true if unclonables.include?(attrib)
+
+      parent ? parent.unclonable?(attrib) : false
+    end
+
     def method_missing(method_name, *args, **kargs, &block)
       if configured?(method_name.to_sym)
         fetch(method_name.to_sym)
@@ -222,6 +237,11 @@ module Apidiesel
       copy = super
       copy.instance_variable_set("@store", store.deep_dup)
       copy.instance_variable_set("@parent", copy.parent.dup)
+
+      unclonables.each do |attrib|
+        copy.set(attrib, store[attrib])
+      end
+
       copy
     end
   end

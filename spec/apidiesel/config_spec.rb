@@ -13,8 +13,9 @@ describe Apidiesel::Config do
         instance.key nil
       end
 
-      it { is_expected.to have_key(:key) }
-      it { is_expected.to have_value(nil) }
+      its(:first) { is_expected.to be_a(Struct) }
+      its("first.name") { is_expected.to eq(:key) }
+      its("first.value") { is_expected.to be_nil }
     end
 
     context "when setting a string value" do
@@ -24,8 +25,9 @@ describe Apidiesel::Config do
         instance.key value
       end
 
-      it { is_expected.to have_key(:key) }
-      it { is_expected.to have_value(value) }
+      its(:first) { is_expected.to be_a(Struct) }
+      its("first.name") { is_expected.to eq(:key) }
+      its("first.value") { is_expected.to eq(value) }
     end
 
     context "when setting an empty hash through :value" do
@@ -35,8 +37,9 @@ describe Apidiesel::Config do
         instance.key value: value
       end
 
-      it { is_expected.to have_key(:key) }
-      it { is_expected.to have_value(value) }
+      its(:first) { is_expected.to be_a(Struct) }
+      its("first.name") { is_expected.to eq(:key) }
+      its("first.value") { is_expected.to eq(value) }
     end
 
     context "when giving a Proc to :value" do
@@ -47,8 +50,9 @@ describe Apidiesel::Config do
         instance.key value: value
       end
 
-      it { is_expected.to have_key(:key) }
-      it { is_expected.to have_value("cucumber salad") }
+      its(:first) { is_expected.to be_a(Struct) }
+      its("first.name") { is_expected.to eq(:key) }
+      its("first.value") { is_expected.to eq("cucumber salad") }
       it { expect(value).to have_received(:call).with(no_args) }
     end
   end
@@ -73,7 +77,11 @@ describe Apidiesel::Config do
   let(:parent_values)       { {} }
   let(:grandparent_values)  { {} }
 
-  let(:grandparent) { described_class.new(grandparent_values, label: :grandparent) }
+  let(:grandparent) do
+    described_class.new(grandparent_values, label: :grandparent) do
+      unclonable_attribute Struct.new(:foo), unclonable: true
+    end
+  end
   let(:parent)      { described_class.new(parent_values, parent: grandparent, label: :parent) }
   let(:child)       { described_class.new(child_values, parent: parent, label: :child) }
 
@@ -326,9 +334,9 @@ describe Apidiesel::Config do
   end
 
   describe "#dup" do
-    let(:child_values)        { { value1: 1 } }
-    let(:parent_values)       { { value2: 2 } }
-    let(:grandparent_values)  { { value3: 3 } }
+    let(:child_values)        { { value1: "foo" } }
+    let(:parent_values)       { { value2: "bar" } }
+    let(:grandparent_values)  { { value3: "baz" } }
 
     let(:clone) { instance.dup }
 
@@ -345,9 +353,21 @@ describe Apidiesel::Config do
     end
 
     context "the clones' values" do
-      it { expect(clone.value1).to eq(1) }
-      it { expect(clone.value2).to eq(2) }
-      it { expect(clone.value3).to eq(3) }
+      it { expect(clone.value1).to eq("foo") }
+      it { expect(clone.value2).to eq("bar") }
+      it { expect(clone.value3).to eq("baz") }
+    end
+
+    context "the clones' value objects" do
+      it { expect(clone.value1.object_id).not_to eq(instance.value1.object_id) }
+      it { expect(clone.value2.object_id).not_to eq(instance.value2.object_id) }
+      it { expect(clone.value3.object_id).not_to eq(instance.value3.object_id) }
+    end
+
+    context "the grandparents unclonable_attribute" do
+      subject { clone.unclonable_attribute }
+
+      its(:object_id) { is_expected.to eq(grandparent.unclonable_attribute.object_id) }
     end
   end
 end
