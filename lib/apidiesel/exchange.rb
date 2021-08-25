@@ -40,7 +40,7 @@ module Apidiesel
     def initialize(endpoint:, endpoint_arguments:, parameters:, metadata: {})
       @endpoint           = endpoint
       @endpoint_arguments = endpoint_arguments
-      @parameters         = parameters
+      @parameters         = parameters || {}
       @metadata           = metadata
     end
 
