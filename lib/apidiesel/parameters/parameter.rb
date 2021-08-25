@@ -52,7 +52,17 @@ module Apidiesel
           value = allowed_values[value] if allowed_values.is_a? Hash
         end
 
-        value = value.send(typecast) if value && typecast.is_a?(Symbol)
+        if typecast.is_a?(Symbol)
+          value =
+            case value
+            when Array
+              value.map { |entry| entry.send(typecast) }
+            when nil
+              nil
+            else
+              value.send(typecast)
+            end
+        end
 
         value ||= default
 
