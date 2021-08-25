@@ -14,22 +14,22 @@ module Apidiesel
         config           = exchange.endpoint.config
         exchange.request = request = HTTPI::Request.new(exchange.url.try(:to_s))
 
-        if config.parameters_as == :query ||
-          (config.parameters_as == :auto && config.http_method == :get)
-          request.query = exchange.parameters
+        if exchange.parameters.any? && params_as_query?(config)
+          request.query =
+            format_params_for_query(exchange.parameters)
         end
 
         if config.headers.present?
           request.headers =
             request.headers
-                        .merge(config.headers)
+                    .merge(config.headers)
         end
 
         request.body =
           if body
             body
           elsif exchange.parameters.any? && params_as_body?(config)
-            exchange.parameters
+            format_params_for_body(exchange.parameters)
           end
 
         if config.http_basic_username && config.http_basic_password
@@ -60,6 +60,24 @@ module Apidiesel
         end
 
         exchange
+      end
+
+      def format_params_for_query(params)
+        params.each_with_object({}) do |key_value, hash|
+          key, value = *key_value
+
+          hash[key] =
+            case value
+            when Array
+              value.join(",")
+            else
+              value
+            end
+        end
+      end
+
+      def format_params_for_body(params)
+        params
       end
 
       # Send parameters as query parts?
