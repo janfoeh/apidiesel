@@ -446,28 +446,27 @@ module Apidiesel
     # @option **args see specific, non-abstract `Apidiesel::Endpoint`
     # @return [Apidiesel::Exchange]
     def build_exchange(**args)
-      params            = {}
-      submittable_params = {}
+      params = {}
 
       config.parameters.each do |name, parameter|
         params.merge!(parameter.process(parameters: args, config: config))
       end
 
       if config.parameter_formatter
-        submittable_params = config.parameter_formatter.call(params)
+        params = config.parameter_formatter.call(params)
       else
-        submittable_params = params.except(*config.parameters_to_filter)
+        params = params.except(*config.parameters_to_filter)
       end
 
       unless config.include_nil_parameters
-        submittable_params.delete_if { |key, value| value.nil? }
+        params.delete_if { |key, value| value.nil? }
       end
 
       exchange =
         Apidiesel::Exchange.new(
           endpoint: self,
-          endpoint_arguments: params,
-          parameters: submittable_params
+          endpoint_arguments: args,
+          parameters: params
         )
 
       exchange.url = build_url(params, exchange)
