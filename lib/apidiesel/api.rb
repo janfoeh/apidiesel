@@ -157,7 +157,7 @@ module Apidiesel
         # the handler has been included manually in order to control the
         # order in which the handlers are run
         unless config.response_handlers
-                      .any? { |handler| handler.is_a?(ResponseProcessor) }
+                      .any? { |handler| handler.is_a?(Handlers::ResponseProcessor) }
           exchange = Handlers::ResponseProcessor.new.handle_response(exchange)
         end
 
