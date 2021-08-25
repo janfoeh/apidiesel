@@ -17,6 +17,10 @@ module Apidiesel
         @children = value
       end
 
+      # If this instance is for the root element of a response, there is no response model
+      # instance yet; we get the response_model_klass instead to instantiate that.
+      # But because the model represents the children, not the array itself, we just pass it along
+      # to them. They — invariably a Processor::Hash — each instantiate the klass for themselves.
       def process(subset, path: nil, element_idx: nil, response_model: nil, response_model_klass: nil)
         # For primitive arrays (without child processors, eg. `array :some_value`)
         # there is nothing else to do but return the raw value

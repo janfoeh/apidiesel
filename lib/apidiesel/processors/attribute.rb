@@ -44,13 +44,14 @@ module Apidiesel
 
       # Apply this processor to `input`
       #
-      # @param input       [Object]
-      # @param path        [Array<Symbol>] the parent processors Hash key
+      # @param input          [Object]
+      # @param path           [Array<Symbol>] the parent processors Hash key
       #   path in the overall response data. Used to improve exception
       #   messages
-      # @param element_idx [Integer, nil] the index of the currently
+      # @param element_idx    [Integer, nil] the index of the currently
       #   processed element, if this element is part of an Array. Used to
       #   improve exception messages
+      # @param response_model [Apidiesel::ResponseModel, nil]
       # @raise MalformedResponseError
       # @return [Object] the processed `input` data
       def execute(input, path:, element_idx: nil, response_model: nil, **kargs)

@@ -3,6 +3,10 @@
 module Apidiesel
   module Processors
     class Hash < ContainerAttribute
+      # If this instance is for the root element (or for a child of the root Processor::Array),
+      # there is no response_model instance yet. We're given the response_model_klass instead
+      # and instantiate it ourselves.
+      # Every child of ours further down the line gets the instance.
       def execute(input, path:, element_idx: nil, response_model: nil, response_model_klass: nil)
         if response_model_klass
           response_model = response_model_klass.new
