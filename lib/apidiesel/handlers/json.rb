@@ -6,11 +6,9 @@ module Apidiesel
       include HttpRequestHelper
 
       def handle_request(exchange)
-        config  = exchange.endpoint.config
-        body =
-          params_as_body?(config) ? ::JSON.dump(exchange.parameters) : nil
+        config = exchange.endpoint.config
 
-        execute_request(exchange: exchange, body: body) do |request|
+        execute_request(exchange: exchange) do |request|
           request.headers["Accept"] =
             config.headers["Accept"] || "application/json"
 
@@ -29,6 +27,12 @@ module Apidiesel
         config.logger.error "Request failed: #{ex}"
         exchange.request.exception = ex
         exchange
+      end
+
+      private
+
+      def format_params_for_body(parameters)
+        ::JSON.dump(parameters)
       end
     end
   end

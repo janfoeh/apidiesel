@@ -30,6 +30,8 @@ module Apidiesel
             body
           elsif exchange.parameters.any? && params_as_body?(config)
             format_params_for_body(exchange.parameters)
+          else
+            nil
           end
 
         if config.http_basic_username && config.http_basic_password
