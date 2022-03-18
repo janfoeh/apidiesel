@@ -522,7 +522,7 @@ module Apidiesel
       when URI
         config.url_value
       when Proc
-        config.url_value.call(base_url, exchange)
+        config.url_value.call(config.base_url, exchange)
       when nil
         if config.base_url
           config.base_url
