@@ -246,7 +246,7 @@ module Apidiesel
             response_handlers     value: -> { [] }
             exception_handlers    value: -> { [] }
             url_value             nil
-            url_args              nil
+            url_args              value: -> { {} }
             http_method           nil
             http_basic_username   nil
             http_basic_password   nil
