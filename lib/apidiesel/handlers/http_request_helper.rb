@@ -51,7 +51,9 @@ module Apidiesel
 
         begin
           exchange.response =
-            HTTPI.request(exchange.endpoint.config.http_method, request)
+            HTTPI.request(exchange.endpoint.config.http_method, request) do |client|
+              client.max_retries = 0 if client.is_a?(Net::HTTP)
+            end
 
           config.logger.debug "Received response: #{exchange.response.inspect}"
         rescue => ex
