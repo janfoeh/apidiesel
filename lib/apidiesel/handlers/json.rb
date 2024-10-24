@@ -10,7 +10,7 @@ module Apidiesel
 
         execute_request(exchange: exchange) do |request|
           request.headers["Accept"] =
-            config.headers["Accept"] || "application/json"
+            config.search_hash_key(:headers, "Accept") || "application/json"
 
           request.headers["Content-Type"] =
             config.content_type || "application/json"
