@@ -34,7 +34,7 @@ module Apidiesel
 
       def process(parameters:, config:)
         result = {}
-        value  = parameters[input_name]
+        value  = parameters[input_name] || default
 
         if fetch && value.nil?
           value = fetch_from(config)
@@ -63,8 +63,6 @@ module Apidiesel
               value.send(typecast)
             end
         end
-
-        value ||= default
 
         if respond_to?(:after_processing)
           value = after_processing(value, parameters: parameters, config: config)
