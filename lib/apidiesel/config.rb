@@ -149,7 +149,7 @@ module Apidiesel
     def fetch(key, only_self: false)
       key = key.to_sym
 
-      if store[key]
+      if !store[key].nil?
         store[key]
       else
         parent.try(:fetch, key) unless only_self
