@@ -242,9 +242,14 @@ module Apidiesel
 
           Config.new(label: descriptive_name) do
             library_namespace     nil
-            request_handlers      value: -> { [] }
-            response_handlers     value: -> { [] }
-            exception_handlers    value: -> { [] }
+            # These MUST be nil in order for the search to bubble
+            # up to parent configs. If you want to override them
+            # in an `Endpoint` with `use ...`, set an empty array
+            # to it first
+            request_handlers      value: nil
+            response_handlers     value: nil
+            exception_handlers    value: nil
+
             url_value             nil
             url_args              value: -> { {} }
             http_method           nil

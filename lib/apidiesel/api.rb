@@ -127,16 +127,20 @@ module Apidiesel
     end
 
     def execute_request(endpoint_klass, *args, action: nil, **kargs)
-      exchange =
+      endpoint =
         if action
           endpoint_klass.for(action)
-                        .new(self).build_exchange(*args, **kargs)
+                        .new(self)
         else
-          endpoint_klass.new(self).build_exchange(*args, **kargs)
+          endpoint_klass.new(self)
         end
 
+      exchange = endpoint.build_exchange(*args, **kargs)
+
       logger.tagged(endpoint_klass.name, exchange.id) do
-        config.request_handlers.each do |handler|
+        endpoint.config
+                .request_handlers
+                .each do |handler|
           logger.debug "executing request handler #{handler.class.name}"
           exchange = handler.handle_request(exchange)
           break if exchange.requested?
@@ -148,7 +152,9 @@ module Apidiesel
           raise "All request handlers failed to send a request"
         end
 
-        config.response_handlers.each do |handler|
+        endpoint.config
+                .response_handlers
+                .each do |handler|
           logger.debug "executing response handler #{handler.class.name}"
           exchange = handler.handle_response(exchange)
         end
@@ -156,8 +162,9 @@ module Apidiesel
         # Execute the endpoints' `responds_with` block automatically, unless
         # the handler has been included manually in order to control the
         # order in which the handlers are run
-        unless config.response_handlers
-                      .any? { |handler| handler.is_a?(Handlers::ResponseProcessor) }
+        unless endpoint.config
+                        .response_handlers
+                        .any? { |handler| handler.is_a?(Handlers::ResponseProcessor) }
           exchange = Handlers::ResponseProcessor.new.handle_response(exchange)
         end
 
@@ -168,8 +175,12 @@ module Apidiesel
 
       exchange
     rescue => ex
-      if config.exception_handlers.any?
-        config.exception_handlers.each do |handler|
+      if endpoint.config
+                  .exception_handlers
+                  .any?
+        endpoint.config
+                .exception_handlers
+                .each do |handler|
           exchange = handler.handle_exception(ex, exchange)
         end
       else
