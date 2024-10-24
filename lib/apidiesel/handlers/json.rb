@@ -9,11 +9,33 @@ module Apidiesel
         config = exchange.endpoint.config
 
         execute_request(exchange: exchange) do |request|
-          request.headers["Accept"] =
-            config.search_hash_key(:headers, "Accept") || "application/json"
+          accept_header =
+            case config.search_hash_key(:headers, "Accept")
+            when NilClass
+              "application/json"
+            when String
+              config.search_hash_key(:headers, "Accept")
+            else
+              nil
+            end
 
-          request.headers["Content-Type"] =
-            config.content_type || "application/json"
+          if accept_header
+            request.headers["Accept"] = accept_header
+          else
+            request.headers.delete("Accept")
+          end
+
+          content_type =
+            case config.content_type
+            when NilClass
+              "application/json"
+            when String
+              content_type
+            else
+              nil
+            end
+
+          request.headers["Content-Type"] = content_type if content_type
         end
 
         if exchange.parseable?
