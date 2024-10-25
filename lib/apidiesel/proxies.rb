@@ -108,13 +108,24 @@ module Apidiesel
       end
 
       def method_missing(method_name, *args, **kargs, &block)
-        method_name = method_name.to_sym
+        if method_name.to_s.end_with?("!")
+          method_name = method_name.to_s
+                                    .delete_suffix("!")
+                                    .to_sym
+          auto_result = true
+        else
+          method_name = method_name.to_sym
+          auto_result = false
+        end
 
         # Single-action endpoints respond to their http method
         # (`.get`, `.post` etc)
         if endpoint.actions.none?
           if method_name == endpoint.http_method
             api.execute_request(endpoint, *args, **kargs)
+                .then do |exchange|
+                  auto_result ? exchange.result : exchange
+                end
           else
             super
           end
@@ -124,6 +135,9 @@ module Apidiesel
         else
           if endpoint.for(method_name)
             api.execute_request(endpoint, *args, action: method_name, **kargs)
+                .then do |exchange|
+                  auto_result ? exchange.result : exchange
+                end
           else
             super
           end
@@ -131,7 +145,8 @@ module Apidiesel
       end
 
       def respond_to_missing?(method_name, *args)
-        method_name = method_name.to_sym
+        method_name = method_name.delete_suffix("!")
+                                  .to_sym
 
         if endpoint.actions.none?
           method_name == endpoint.http_method
