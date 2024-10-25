@@ -77,6 +77,7 @@ module Apidiesel
             exception_handlers      value: -> { [] }, unclonable: true
             endpoint_namespace      default_endpoint_namespace, unclonable: true
             base_url                nil
+            bearer_token            nil
             http_method             :get
             http_basic_username     nil
             http_basic_password     nil
