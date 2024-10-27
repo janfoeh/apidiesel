@@ -24,8 +24,6 @@ module Apidiesel
         else
           file
         end
-
-        exchange
       end
 
       module EndpointExtension

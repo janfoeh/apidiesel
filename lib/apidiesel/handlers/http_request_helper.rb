@@ -3,88 +3,72 @@
 module Apidiesel
   module Handlers
     module HttpRequestHelper
-      protected
+      private
 
       # Executes a HTTP request
       #
       # @param exchange [Apidiesel::Exchange]
       # @param body     [Hash] the payload to be sent as request body
       # @yieldparam httpi_request [Request]
-      def execute_request(exchange:, body: nil)
-        config           = exchange.endpoint.config
-        exchange.request = request = HTTPI::Request.new(exchange.url.try(:to_s))
+      def execute_request(exchange:, body: nil, default_accept: nil, default_content_type: nil)
+        config     = exchange.endpoint.config
+        connection = Faraday.new(ssl: { verify_mode: config.ssl_verify_mode })
 
-        if exchange.parameters.any? && params_as_query?(config)
-          request.query =
-            format_params_for_query(exchange.parameters)
+        if config.form_multipart
+          connection.request :multipart
         end
-
-        if config.headers.present?
-          request.headers =
-            request.headers
-                    .merge(config.headers)
-        end
-
-        request.body =
-          if body
-            body
-          elsif exchange.parameters.any? && params_as_body?(config)
-            format_params_for_body(exchange.parameters)
-          else
-            nil
-          end
 
         if config.http_basic_username && config.http_basic_password
-          request.auth.basic(config.http_basic_username, config.http_basic_password)
+          conn.request(:authorization, :basic, config.http_basic_username, config.http_basic_password)
         end
 
-        request.auth.ssl.verify_mode = config.ssl_verify_mode
-        request.open_timeout         = config.request_timeout
-        request.read_timeout         = config.request_timeout
+        exchange.response =
+          connection.run_request(exchange.endpoint.config.http_method,
+                                  exchange.url.try(:to_s),
+                                  nil,
+                                  config.headers) do |request|
+            exchange.request = request
 
-        # note that we yield the Apidiesel::Request, not the raw HTTPI::Request
-        yield exchange.request if block_given?
+            request.options.open_timeout = config.request_timeout
+            request.options.read_timeout = config.request_timeout
 
-        config.logger.debug "Sending request: #{request.inspect}"
-
-        exchange.metadata[:started_at] = Time.now
-
-        begin
-          exchange.response =
-            HTTPI.request(exchange.endpoint.config.http_method, request) do |client|
-              client.max_retries = 0 if client.is_a?(Net::HTTP)
-
-              if config.form_multipart
-                client.multipart_form_post = true
-              end
-            end
-
-          config.logger.debug "Received response: #{exchange.response.inspect}"
-        rescue => ex
-          config.logger.error "Request failed: #{ex}"
-          exchange.request.exception = ex
-        ensure
-          exchange.metadata[:finished_at] = Time.now
-        end
-
-        exchange
-      end
-
-      def format_params_for_query(params)
-        params.each_with_object({}) do |key_value, hash|
-          key, value = *key_value
-
-          hash[key] =
-            case value
-            when Array
-              value.join(",")
+            if accept_header(default_accept, config)
+              request.headers["Accept"] = accept_header(default_accept, config)
             else
-              value
+              request.headers.delete("Accept")
             end
-        end
+
+            if content_type(default_content_type, config)
+              request.headers["Content-Type"] = content_type(default_content_type, config)
+            else
+              request.headers.delete("Content-Type")
+            end
+
+            request.params.update(format_params_for_query(exchange.parameters, config)) if params_as_query?(config)
+            request.body = format_params_for_body(body || exchange.parameters, config) if params_as_body?(config)
+
+            yield request if block_given?
+
+            config.logger.debug "Sending request: #{request.inspect}"
+
+            exchange.metadata[:started_at] = Time.now
+          end
+
+        config.logger.debug "Received response: #{exchange.response.inspect}"
+
+      rescue => ex
+        config.logger.error "Request failed: #{ex}"
+        exchange.request.exception = ex
+
+      ensure
+        exchange.metadata[:finished_at] = Time.now
       end
 
-      def format_params_for_body(params)
+      def format_params_for_query(params, _config)
+        params
+      end
+
+      def format_params_for_body(params, _config)
         params
       end
 
@@ -108,6 +92,28 @@ module Apidiesel
         return true if config.parameters_as == :auto && config.http_method != :get
 
         false
+      end
+
+      def accept_header(default, config)
+        case config.search_hash_key(:headers, "Accept")
+        when FalseClass
+          nil
+        when String
+          config.search_hash_key(:headers, "Accept")
+        else
+          default
+        end
+      end
+
+      def content_type(default, config)
+        case config.content_type
+        when FalseClass
+          nil
+        when String
+          config.content_type
+        else
+          default
+        end
       end
     end
   end

@@ -13,8 +13,6 @@ module Apidiesel
             config.set(:headers, { "Authorization" => "Bearer #{config.bearer_token}" })
           end
         end
-
-        exchange
       end
     end
   end

@@ -9,7 +9,7 @@ module Apidiesel
     attr_accessor :original
     attr_accessor :exception
 
-    def_delegators :original, :query, :body, :headers
+    def_delegators :original, :params, :body, :headers
 
     def initialize(original)
       @original = original
@@ -17,6 +17,10 @@ module Apidiesel
 
     def successful?
       exception.blank?
+    end
+
+    def query
+      params
     end
   end
 end

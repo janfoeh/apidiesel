@@ -163,6 +163,54 @@ module Apidiesel
         )
     end
 
+    # Defines a form multipart part
+    #
+    # @example
+    #   expects do
+    #     multipart :config, mime_type: "application/json"
+    #   end
+    #
+    # Overload the default mime type set here at runtime
+    # by passing `:<name>_mime_type` to the endpoint.
+    #
+    # @!macro expectation_types
+    # @param mime_type [String]
+    def multipart(name, mime_type: "text/plain", **kargs)
+      parameters[name] =
+        Parameters::Multipart.new(
+          input_name: name,
+          mime_type:  mime_type,
+          **kargs
+        )
+    end
+
+    # Defines a form multipart part which accepts an IO object
+    #
+    # Used for uploads. The callsite is responsible for closing the
+    # passed-in file object.
+    #
+    # @example
+    #   expects do
+    #     multipart :config, mime_type: "application/json"
+    #   end
+    #
+    # You must set the filename at runtime by passing
+    # `:<name>_filename` to the endpoint.
+    #
+    # Overload the default mime type set here at runtime
+    # by passing `:<name>_mime_type` to the endpoint.
+    #
+    # @!macro expectation_types
+    # @param mime_type [String]
+    def multipart_file(name, mime_type: "text/plain", **kargs)
+      parameters[name] =
+        Parameters::MultipartFile.new(
+          input_name: name,
+          mime_type:  mime_type,
+          **kargs
+        )
+    end
+
     # Defines an object parameter
     #
     # By default, `#to_hash` is called on the input value; set `:typecast` to override.

@@ -50,12 +50,12 @@ module Apidiesel
       @id ||= SecureRandom.hex
     end
 
-    def request=(httpi_request)
-      @request = Request.new(httpi_request)
+    def request=(faraday_request)
+      @request = Request.new(faraday_request)
     end
 
-    def response=(httpi_response)
-      @response = Response.new(httpi_response)
+    def response=(faraday_response)
+      @response = Response.new(faraday_response)
     end
 
     # Has a request been sent?
@@ -219,6 +219,8 @@ module Apidiesel
             - BODY: #{(response.parsed_body || response.body).inspect}
         EOT
       end
+
+      output
     end
   end
 end

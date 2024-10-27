@@ -8,57 +8,37 @@ module Apidiesel
       def handle_request(exchange)
         config = exchange.endpoint.config
 
-        execute_request(exchange: exchange) do |request|
-          accept_header =
-            case config.search_hash_key(:headers, "Accept")
-            when NilClass
-              "text/html"
-            when String
-              config.search_hash_key(:headers, "Accept")
-            else
-              nil
-            end
-
-          if accept_header
-            request.headers["Accept"] = accept_header
-          else
-            request.headers.delete("Accept")
-          end
-
-          content_type =
-            case config.content_type
-            when NilClass
-              "application/x-www-form-urlencoded"
-            when String
-              content_type
-            else
-              nil
-            end
-
-          if content_type
-            request.headers["Content-Type"] = content_type
-          else
-            request.headers.delete("Content-Type")
+        execute_request(exchange: exchange,
+                        default_accept: "text/html",
+                        default_content_type: "application/x-www-form-urlencoded") do |request|
+          if config.form_multipart
+            request.headers["Content-Type"] = "multipart/form-data"
           end
         end
 
-        if exchange.parseable?
-          exchange.response.process { |body| ::JSON.parse(body) }
-        else
-          config.logger.debug "response is not parseable"
-        end
-
-        exchange
       rescue StandardError => ex
         config.logger.error "Request failed: #{ex}"
         exchange.request.exception = ex
-        exchange
+      end
+
+      def handle_response(exchange)
+        config = exchange.endpoint.config
+
+        if exchange.parseable?
+          exchange.response.process { |body| body }
+        else
+          config.logger.debug "response is not parseable"
+        end
       end
 
       private
 
-      def format_params_for_body(parameters)
-        URI.encode_www_form(parameters)
+      def format_params_for_body(parameters, config)
+        if config.form_multipart
+          parameters
+        else
+          URI.encode_www_form(parameters)
+        end
       end
     end
   end

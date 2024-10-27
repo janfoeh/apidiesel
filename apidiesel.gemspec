@@ -22,7 +22,8 @@ Gem::Specification.new do |spec|
 
   spec.add_runtime_dependency "activesupport", ">= 5.2.6", "< 7.2"
   spec.add_runtime_dependency "activemodel", ">= 5.2.6", "< 7.2"
-  spec.add_runtime_dependency 'httpi', '>= 2.4.1'
+  spec.add_runtime_dependency "faraday", "> 2", "< 3"
+  spec.add_runtime_dependency "faraday-multipart", "> 1", "< 2"
 
   spec.add_development_dependency "bundler", "~> 2.2"
   spec.add_development_dependency "rake", "~> 13.0"

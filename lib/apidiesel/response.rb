@@ -8,14 +8,10 @@ module Apidiesel
     attr_accessor :exception
     attr_accessor :parsed_body
 
-    def_delegators :original, :body, :headers, :error?, :code
+    def_delegators :original, :body, :headers, :success?, :status
 
     def initialize(original)
       @original = original
-    end
-
-    def successful?
-      !error?
     end
 
     def process
@@ -24,6 +20,21 @@ module Apidiesel
       rescue StandardError => ex
         self.exception = ex
       end
+    end
+
+    # @return [Integer]
+    def code
+      status
+    end
+
+    # @return [Boolean]
+    def successful?
+      success?
+    end
+
+    # @return [Boolean]
+    def error?
+      !success?
     end
   end
 end
