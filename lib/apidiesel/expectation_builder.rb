@@ -143,6 +143,26 @@ module Apidiesel
     alias_method :time, :datetime
     alias_method :date, :datetime
 
+    # Defines a file parameter
+    #
+    # Used for uploads. The callsite is responsible for closing the
+    # passed-in file object.
+    #
+    # @example
+    #   expects do
+    #     file :image
+    #   end
+    #
+    # @!macro expectation_types
+    def file(name, **kargs)
+      parameters[name] =
+        Parameters::Parameter.new(
+          input_name:   name,
+          output_name:  kargs.delete(:submitted_as),
+          **kargs
+        )
+    end
+
     # Defines an object parameter
     #
     # By default, `#to_hash` is called on the input value; set `:typecast` to override.
