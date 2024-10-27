@@ -253,6 +253,7 @@ module Apidiesel
             url_value             nil
             url_args              value: -> { {} }
             bearer_token          nil
+            form_multipart        false
             http_method           nil
             http_basic_username   nil
             http_basic_password   nil

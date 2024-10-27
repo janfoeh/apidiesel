@@ -53,6 +53,10 @@ module Apidiesel
           exchange.response =
             HTTPI.request(exchange.endpoint.config.http_method, request) do |client|
               client.max_retries = 0 if client.is_a?(Net::HTTP)
+
+              if config.form_multipart
+                client.multipart_form_post = true
+              end
             end
 
           config.logger.debug "Received response: #{exchange.response.inspect}"
