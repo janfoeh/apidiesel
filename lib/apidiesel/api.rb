@@ -143,7 +143,7 @@ module Apidiesel
                 .request_handlers
                 .each do |handler|
           logger.debug "executing request handler #{handler.class.name}"
-          exchange = handler.handle_request(exchange)
+          handler.handle_request(exchange)
           break if exchange.requested?
         end
 
@@ -157,7 +157,7 @@ module Apidiesel
                 .response_handlers
                 .each do |handler|
           logger.debug "executing response handler #{handler.class.name}"
-          exchange = handler.handle_response(exchange)
+          handler.handle_response(exchange)
         end
 
         # Execute the endpoints' `responds_with` block automatically, unless
@@ -166,7 +166,7 @@ module Apidiesel
         unless endpoint.config
                         .response_handlers
                         .any? { |handler| handler.is_a?(Handlers::ResponseProcessor) }
-          exchange = Handlers::ResponseProcessor.new.handle_response(exchange)
+          Handlers::ResponseProcessor.new.handle_response(exchange)
         end
 
         exchange.raise_any_exception
@@ -182,7 +182,7 @@ module Apidiesel
         endpoint.config
                 .exception_handlers
                 .each do |handler|
-          exchange = handler.handle_exception(ex, exchange)
+          handler.handle_exception(ex, exchange)
         end
       else
         raise ex
