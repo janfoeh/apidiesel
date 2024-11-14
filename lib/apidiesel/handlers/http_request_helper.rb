@@ -58,6 +58,15 @@ module Apidiesel
 
       rescue => ex
         config.logger.error "Request failed: #{ex}"
+
+        # This might happen if such a low-level exception occurs that Faraday
+        # does not produce a request
+        if exchange.request.nil?
+          # Looks weird, I know, but we are initialising an empty
+          # `Apidiesel::Request` wrapper
+          exchange.request = nil
+        end
+
         exchange.request.exception = ex
 
       ensure
