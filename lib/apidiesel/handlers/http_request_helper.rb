@@ -19,7 +19,7 @@ module Apidiesel
         end
 
         if config.http_basic_username && config.http_basic_password
-          conn.request(:authorization, :basic, config.http_basic_username, config.http_basic_password)
+          connection.request(:authorization, :basic, config.http_basic_username, config.http_basic_password)
         end
 
         exchange.response =
