@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "uri"
+require "openssl"
 require "faraday"
 require "faraday/multipart"
 require "active_support"

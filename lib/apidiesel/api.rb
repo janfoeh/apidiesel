@@ -83,7 +83,7 @@ module Apidiesel
             http_basic_password     nil
             content_type            nil
             headers                 value: -> { {} }
-            ssl_verify_mode         :peer
+            ssl_verify_mode         OpenSSL::SSL::VERIFY_PEER
             request_timeout         30
             parameters_as           :auto
             include_nil_parameters  false
