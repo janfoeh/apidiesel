@@ -27,8 +27,6 @@ module Apidiesel
                                   exchange.url.try(:to_s),
                                   nil,
                                   config.headers) do |request|
-            exchange.request = request
-
             request.options.open_timeout = config.request_timeout
             request.options.read_timeout = config.request_timeout
 
@@ -50,6 +48,8 @@ module Apidiesel
             yield request if block_given?
 
             config.logger.debug "Sending request: #{request.inspect}"
+
+            exchange.request = request
 
             exchange.metadata[:started_at] = Time.now
           end
