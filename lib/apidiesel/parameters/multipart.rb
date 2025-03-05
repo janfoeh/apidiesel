@@ -10,7 +10,7 @@ module Apidiesel
       end
 
       def after_processing(value, parameters:, config:)
-        mime_type = parameters["#{input_name}_mime_type".to_sym] || mime_type
+        mime_type = parameters["#{input_name}_mime_type".to_sym] || default_mime_type
 
         Faraday::ParamPart.new(value, mime_type)
       end
