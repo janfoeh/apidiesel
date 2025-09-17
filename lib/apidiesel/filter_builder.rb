@@ -207,23 +207,20 @@ module Apidiesel
 
     # @!macro filter_types
     def hash(*args, **kargs, &block)
-      unless block.present?
-        create_primitive_formatter(:to_hash, *args, **kargs)
-        return
-      end
-
       kargs =
         normalize_arguments(args, kargs)
 
       processors << processor =
         Processors::Hash.new(**kargs)
 
-      builder =
-        FilterBuilder.new(**global_options)
+      if block.present?
+        builder =
+          FilterBuilder.new(**global_options)
 
-      builder.instance_eval(&block)
+        builder.instance_eval(&block)
 
-      processor.children = builder.processors
+        processor.children = builder.processors
+      end
     end
 
     # @example

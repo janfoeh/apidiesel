@@ -23,14 +23,18 @@ module Apidiesel
         return nil if subset.nil? || subset.empty?
 
         result =
-          children.each_with_object({}) do |child, result|
-            result[child.write_key] =
-              child.execute(
-                subset,
-                path: path,
-                response_model: response_model,
-                response_model_klass: response_model&.attribute_model(child.write_key)
-              )
+          if children.any?
+            children.each_with_object({}) do |child, result|
+              result[child.write_key] =
+                child.execute(
+                  subset,
+                  path: path,
+                  response_model: response_model,
+                  response_model_klass: response_model&.attribute_model(child.write_key)
+                )
+            end
+          else
+            subset.to_hash
           end
 
         if response_model
