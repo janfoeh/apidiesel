@@ -23,25 +23,71 @@ module Apidiesel
     # All processors wrapped into one root container element - a Hash or an
     # Array processor
     #
+    # We have to cover the following possibilities:
+    #
+    # 1) explicit array root node
+    #
+    #     responds_with do
+    #       array do
+    #         ...
+    #       end
+    #     end
+    #
+    # 2) explicit Hash root node
+    #
+    #     responds_with do
+    #       hash do
+    #         ...
+    #       end
+    #     end
+    #
+    # 3) explicit Hash root node, `array: true`
+    #
+    #     responds_with(array: true) do
+    #       hash do
+    #         ...
+    #       end
+    #     end
+    #
+    # 4) implicit root node
+    #
+    #     responds_with do
+    #       string :foo
+    #       integer :bar
+    #     end
+    #
+    # 5) implicit root node, `array: true`
+    #
+    #     responds_with(array: true) do
+    #       string :foo
+    #       integer :bar
+    #     end
+    #
     # @return [Processors::Hash, Processors::Array]
     def root_processor
+      raise Apidiesel::Error, "Empty responds_with configuration" if processors.none?
+
       if processors.one?
         root = processors.first
 
-        if root.is_a?(Processors::Array) ||(root.is_a?(Processors::Hash) && !expect_array)
-          return root
-        end
-
-      else
-        root =
-          Processors::Hash.new(**global_options)
-                          .tap { |processor| processor.children = @processors }
-
-        return root unless expect_array
+        # explicit array root node
+        return root if processors.first.is_a?(Processors::Array)
+        # explicit hash root node, no array wrapping
+        return root if processors.first.is_a?(Processors::Hash) && !expect_array
       end
 
-      Processors::Array.new(**global_options)
-                        .tap { |processor| processor.children = root }
+      # wrap everything in an implicit hash node, unless we already have one (and only one)
+      if processors.many? || !processors.first.is_a?(Processors::Hash)
+        root = Processors::Hash.new(**global_options)
+                                .tap { |processor| processor.children = @processors }
+      end
+
+      if expect_array
+        Processors::Array.new(**global_options)
+                          .tap { |processor| processor.children = root }
+      else
+        root
+      end
     end
 
     # @!macro [new] filter_types
