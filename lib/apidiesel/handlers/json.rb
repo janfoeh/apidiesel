@@ -8,6 +8,10 @@ module Apidiesel
       def handle_request(exchange)
         config = exchange.endpoint.config
 
+        if config.form_multipart
+          raise ArgumentError, "#{exchange.endpoint.class}: form_multipart is incompatible with Handlers::JSON — use Handlers::Form instead"
+        end
+
         execute_request(exchange: exchange,
                         default_accept: "application/json",
                         default_content_type: "application/json")
