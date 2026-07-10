@@ -163,7 +163,6 @@ module Apidiesel
 
     # Executes the endpoints `responds_with {}` block to create the final `#result`
     #
-    # @raise [Apidiesel::ResponseError]
     # @return [void]
     def process_response
       begin
