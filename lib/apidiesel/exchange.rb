@@ -153,9 +153,12 @@ module Apidiesel
     # or response phase
     #
     # @raise [StandardError]
+    # @return [self]
     def raise_any_exception
       raise request_exception if request_exception && config.raise_request_errors
       raise response_exception if response_exception && config.raise_response_errors
+
+      self
     end
 
     # Executes the endpoints `responds_with {}` block to create the final `#result`
