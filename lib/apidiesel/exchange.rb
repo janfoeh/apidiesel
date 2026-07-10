@@ -161,6 +161,34 @@ module Apidiesel
       self
     end
 
+    # Raises on any exception or on a non-2xx/3xx HTTP response.
+    #
+    # Calls +#raise_any_exception+ first, then inspects the response code.
+    # Use this when any failure should abort execution.
+    #
+    # @raise [Apidiesel::ResponseError] if no response was received
+    # @raise [Apidiesel::ClientError] on 4xx responses
+    # @raise [Apidiesel::ServerError] on 5xx responses
+    # @raise [StandardError] on request/response exceptions (via +#raise_any_exception+)
+    # @return [self]
+    def raise_when_unsuccessful
+      raise_any_exception
+
+      unless response_received?
+        raise ResponseError.new("no response received", self)
+      end
+
+      code = response.code
+
+      if (400..499).cover?(code)
+        raise ClientError.new("HTTP #{code}", self)
+      elsif (500..599).cover?(code)
+        raise ServerError.new("HTTP #{code}", self)
+      end
+
+      self
+    end
+
     # Executes the endpoints `responds_with {}` block to create the final `#result`
     #
     # @return [void]

@@ -15,6 +15,12 @@ module Apidiesel
 
   class ResponseError < RequestError; end
 
+  # Raised by +Exchange#raise_when_unsuccessful+ for 4xx responses
+  class ClientError < ResponseError; end
+
+  # Raised by +Exchange#raise_when_unsuccessful+ for 5xx responses
+  class ServerError < ResponseError; end
+
   class MalformedResponseError < Error
     attr_reader :content
 
