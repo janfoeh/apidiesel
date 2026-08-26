@@ -18,6 +18,9 @@ module Apidiesel
   # Raised by +Exchange#raise_when_unsuccessful+ for 4xx responses
   class ClientError < ResponseError; end
 
+  # Raised by +Exchange#raise_when_unsuccessful+ specifically for 429 responses
+  class RateLimitedError < ClientError; end
+
   # Raised by +Exchange#raise_when_unsuccessful+ for 5xx responses
   class ServerError < ResponseError; end
 

@@ -180,8 +180,12 @@ module Apidiesel
 
       code = response.code
 
-      if (400..499).cover?(code)
+      if code == 429
+        raise RateLimitedError.new("HTTP #{429} (rate limited)", self)
+
+      elsif (400..499).cover?(code)
         raise ClientError.new("HTTP #{code}", self)
+
       elsif (500..599).cover?(code)
         raise ServerError.new("HTTP #{code}", self)
       end
