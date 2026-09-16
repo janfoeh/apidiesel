@@ -42,7 +42,11 @@ module Apidiesel
               request.headers.delete("Content-Type")
             end
 
-            request.params.update(format_params_for_query(exchange.parameters, config)) if params_as_query?(config)
+            if params_as_query?(config)
+              request.options.params_encoder = query_params_encoder(config)
+              request.params.update(format_params_for_query(exchange.parameters, config))
+            end
+
             request.body = format_params_for_body(body || exchange.parameters, config) if params_as_body?(config)
 
             yield request if block_given?
@@ -73,8 +77,31 @@ module Apidiesel
         exchange.metadata[:finished_at] = Time.now
       end
 
-      def format_params_for_query(params, _config)
-        params
+      # Prepares `params` for use as URL query parameters, taking
+      # `config.array_parameter_format` into account
+      #
+      # @param params [Hash]
+      # @param config [Config]
+      # @return [Hash]
+      def format_params_for_query(params, config)
+        return params unless config.array_parameter_format == :comma
+
+        params.transform_values do |value|
+          value.is_a?(Array) ? value.join(",") : value
+        end
+      end
+
+      # Picks the Faraday params encoder matching `config.array_parameter_format`
+      #
+      # `:comma`-formatted Array parameters are already joined into plain
+      # Strings by {#format_params_for_query}, so the encoder choice only
+      # matters for `:brackets` (Faraday's own default, `key[]=a&key[]=b`)
+      # versus `:repeat` (`key=a&key=b`)
+      #
+      # @param config [Config]
+      # @return [Faraday::NestedParamsEncoder, Faraday::FlatParamsEncoder]
+      def query_params_encoder(config)
+        config.array_parameter_format == :repeat ? Faraday::FlatParamsEncoder : Faraday::NestedParamsEncoder
       end
 
       def format_params_for_body(params, _config)

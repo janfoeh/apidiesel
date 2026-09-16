@@ -268,12 +268,13 @@ module Apidiesel
             response_detector     response_detector
             parameter_formatter   nil
             parameters_as         :auto
+            array_parameter_format nil
           end
         end
       end
 
       %i(http_method http_basic_username http_basic_password content_type headers
-         parameters_as response_detector library_namespace).each do |config_key|
+         parameters_as array_parameter_format response_detector library_namespace).each do |config_key|
         define_method(config_key) do |value = nil|
           value.present? ? config.set(config_key, value) : config.fetch(config_key)
         end

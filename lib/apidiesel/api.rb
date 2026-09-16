@@ -86,6 +86,7 @@ module Apidiesel
             ssl_verify_mode         OpenSSL::SSL::VERIFY_PEER
             request_timeout         30
             parameters_as           :auto
+            array_parameter_format  :brackets
             include_nil_parameters  false
             raise_request_errors    false
             raise_response_errors   false
@@ -96,7 +97,7 @@ module Apidiesel
 
       %i(endpoint_namespace base_url http_method http_basic_username
           http_basic_password content_type headers ssl_verify_mode
-          timeout parameters_as logger).each do |config_key|
+          timeout parameters_as array_parameter_format logger).each do |config_key|
         define_method(config_key) do |value = nil|
           value.present? ? config.set(config_key, value) : config.fetch(config_key)
         end
