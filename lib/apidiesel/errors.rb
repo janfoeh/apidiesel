@@ -15,6 +15,11 @@ module Apidiesel
 
   class ResponseError < RequestError; end
 
+  # Raised by response handlers when a response body can't be parsed in the
+  # format the endpoint expects, e.g. an HTML error page where JSON was due.
+  # The underlying parser error is available as +#cause+.
+  class UnparseableResponseError < ResponseError; end
+
   # Raised by +Exchange#raise_when_unsuccessful+ for 4xx responses
   class ClientError < ResponseError; end
 

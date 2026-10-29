@@ -25,13 +25,21 @@ module Apidiesel
         config = exchange.endpoint.config
 
         if exchange.parseable?
-          exchange.response.process { |body| ::JSON.parse(body) }
+          exchange.response.process { |body| parse(body, exchange) }
         else
           config.logger.debug "response is not parseable"
         end
       end
 
       private
+
+      # @raise [Apidiesel::UnparseableResponseError] wrapping the
+      #   +JSON::ParserError+, so the exception carries the exchange
+      def parse(body, exchange)
+        ::JSON.parse(body)
+      rescue ::JSON::ParserError => ex
+        raise UnparseableResponseError.new("response is not valid JSON: #{ex.message}", exchange)
+      end
 
       def format_params_for_body(parameters, _config)
         ::JSON.dump(parameters)
