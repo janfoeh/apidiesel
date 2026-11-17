@@ -178,19 +178,31 @@ module Apidiesel
         raise ResponseError.new("no response received", self)
       end
 
+      error = status_error
+
+      raise error if error
+
+      self
+    end
+
+    # The exception matching the HTTP status of the response, without raising it
+    #
+    # @return [Apidiesel::ClientError, Apidiesel::RateLimitedError, Apidiesel::ServerError, nil]
+    #   `nil` for 2xx/3xx responses and when no response has been received
+    def status_error
+      return unless response_received?
+
       code = response.code
 
       if code == 429
-        raise RateLimitedError.new("HTTP #{429} (rate limited)", self)
+        RateLimitedError.new("HTTP #{code} (rate limited)", self)
 
       elsif (400..499).cover?(code)
-        raise ClientError.new("HTTP #{code}", self)
+        ClientError.new("HTTP #{code}", self)
 
       elsif (500..599).cover?(code)
-        raise ServerError.new("HTTP #{code}", self)
+        ServerError.new("HTTP #{code}", self)
       end
-
-      self
     end
 
     # Executes the endpoints `responds_with {}` block to create the final `#result`
